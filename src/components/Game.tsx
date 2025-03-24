@@ -12,21 +12,17 @@ import {
   Divider,
 } from '@mui/material';
 import { BankerGame } from './BankerGame';
+import { Player } from './PlayerForm';
+import { HoleSetup, Hole } from '../types';
 
 export type GameType = 'banker' | 'mrpar' | 'wolf';
 
 interface GameProps {
-  playerCount: number;
   scores: { [key: string]: { [key: number]: number | null } };
-  holes: { number: number; par: number; strokeIndex: number; distance: number; }[];
+  holes: Hole[];
   holeSetups: { [key: number]: HoleSetup };
   onHoleSetupChange: (holeNumber: number, setup: Partial<HoleSetup>) => void;
-}
-
-interface HoleSetup {
-  banker: number | null;
-  dots: number;
-  doubles: { [key: number]: boolean };
+  players: Player[];
 }
 
 interface GameRule {
@@ -54,11 +50,11 @@ const gameRules: Record<GameType, GameRule> = {
 };
 
 export const Game: React.FC<GameProps> = ({
-  playerCount,
   scores,
   holes,
   holeSetups,
   onHoleSetupChange,
+  players,
 }) => {
   const [selectedGame, setSelectedGame] = useState<GameType>('banker');
 
@@ -68,7 +64,7 @@ export const Game: React.FC<GameProps> = ({
 
   const getPlayerWarning = (game: GameType) => {
     const minPlayers = gameRules[game].minPlayers;
-    if (playerCount < minPlayers) {
+    if (players.length < minPlayers) {
       return `This game requires at least ${minPlayers} players`;
     }
     return null;
@@ -119,10 +115,10 @@ export const Game: React.FC<GameProps> = ({
       {selectedGame === 'banker' && !getPlayerWarning(selectedGame) && (
         <BankerGame
           scores={scores}
-          playerCount={playerCount}
           holes={holes}
           holeSetups={holeSetups}
           onHoleSetupChange={onHoleSetupChange}
+          players={players}
         />
       )}
 
