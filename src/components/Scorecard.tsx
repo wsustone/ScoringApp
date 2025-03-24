@@ -61,6 +61,15 @@ const StyledTable = styled(Table)({
   },
 });
 
+const StyledStars = styled('div')({
+  position: 'absolute',
+  top: 0,
+  right: 2,
+  fontSize: '0.7rem',
+  color: '#FFB100',
+  lineHeight: 1,
+});
+
 const getScoreColor = (score: number | null, par: number) => {
   if (score === null) return 'inherit';
   if (score < par) return '#E53935'; // red
@@ -80,11 +89,38 @@ const calculatePlayerSum = (scores: { [key: number]: number | null }, start: num
   return hasScores ? sum : null;
 };
 
+const getHandicapStrokes = (handicap: number | null, strokeIndex: number, holes: Hole[]): number => {
+  if (!handicap) return 0;
+  
+  // Sort holes by stroke index in ascending order (lowest first)
+  const sortedHoles = [...holes].sort((a, b) => a.strokeIndex - b.strokeIndex);
+  const targetHole = holes.find(h => h.strokeIndex === strokeIndex);
+  if (!targetHole) return 0;
+
+  // Find position of this hole in the sorted list (0-based)
+  const strokeOrder = sortedHoles.findIndex(h => h.strokeIndex === strokeIndex);
+  if (strokeOrder === -1) return 0;
+
+  // Calculate strokes for this hole
+  const quotient = Math.floor(handicap / 18);
+  const remainder = handicap % 18;
+  
+  // Everyone gets the base strokes
+  let strokes = quotient;
+  
+  // Add extra stroke if this hole's position is within the remainder
+  if (strokeOrder < remainder) {
+    strokes++;
+  }
+
+  return strokes;
+};
+
 export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
   const playerNames = Array(4).fill('');
   const rows = ['Hole', 'Distance', 'Par', 'SI', ...playerNames.map((_, i) => `Player ${i + 1}`)];
   
-  // Create a state object for each player's scores
+  // Create a state object for each player's scores and handicaps
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>(
     playerNames.reduce((acc, _, playerIndex) => ({
       ...acc,
@@ -92,6 +128,13 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
         ...holeAcc,
         [hole.number]: null,
       }), {}),
+    }), {})
+  );
+
+  const [handicaps, setHandicaps] = useState<{ [key: string]: number | null }>(
+    playerNames.reduce((acc, _, playerIndex) => ({
+      ...acc,
+      [`player${playerIndex}`]: null,
     }), {})
   );
 
@@ -103,6 +146,14 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
         ...prev[`player${playerIndex}`],
         [holeNumber]: numValue,
       },
+    }));
+  };
+
+  const handleHandicapChange = (playerIndex: number, value: string) => {
+    const numValue = value === '' ? null : parseInt(value, 10);
+    setHandicaps(prev => ({
+      ...prev,
+      [`player${playerIndex}`]: numValue,
     }));
   };
 
@@ -140,6 +191,7 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
         <TableHead>
           <StyledTableRow>
             <StyledTableCell className="header"></StyledTableCell>
+            <StyledTableCell align="center" className="header">HCP</StyledTableCell>
             {holes.slice(0, 9).map((hole) => (
               <StyledTableCell key={hole.number} align="center" className="header">
                 {hole.number}
@@ -169,27 +221,55 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
                   row
                 )}
               </StyledTableCell>
+              <StyledTableCell align="center">
+                {rowIndex >= 4 ? (
+                  <TextField
+                    size="small"
+                    type="number"
+                    variant="standard"
+                    value={handicaps[`player${rowIndex - 4}`] ?? ''}
+                    onChange={(e) => handleHandicapChange(rowIndex - 4, e.target.value)}
+                    inputProps={{ 
+                      min: 0,
+                      max: 54,
+                      style: { 
+                        width: '40px',
+                        textAlign: 'center',
+                      }
+                    }}
+                  />
+                ) : ''}
+              </StyledTableCell>
               {holes.slice(0, 9).map((hole) => (
-                <StyledTableCell key={`${row}-${hole.number}`} align="center">
+                <StyledTableCell 
+                  key={`${row}-${hole.number}`} 
+                  align="center"
+                  sx={{ position: 'relative' }}
+                >
                   {rowIndex === 0 ? hole.number :
                    rowIndex === 1 ? hole.distance :
                    rowIndex === 2 ? hole.par :
                    rowIndex === 3 ? hole.strokeIndex : (
-                    <TextField
-                      size="small"
-                      type="number"
-                      variant="standard"
-                      value={scores[`player${rowIndex - 4}`][hole.number] ?? ''}
-                      onChange={(e) => handleScoreChange(rowIndex - 4, hole.number, e.target.value)}
-                      inputProps={{ 
-                        min: 1,
-                        style: { 
-                          width: '40px',
-                          textAlign: 'center',
-                          color: getScoreColor(scores[`player${rowIndex - 4}`][hole.number], hole.par),
-                        }
-                      }}
-                    />
+                    <>
+                      <StyledStars>
+                        {'★'.repeat(getHandicapStrokes(handicaps[`player${rowIndex - 4}`], hole.strokeIndex, holes))}
+                      </StyledStars>
+                      <TextField
+                        size="small"
+                        type="number"
+                        variant="standard"
+                        value={scores[`player${rowIndex - 4}`][hole.number] ?? ''}
+                        onChange={(e) => handleScoreChange(rowIndex - 4, hole.number, e.target.value)}
+                        inputProps={{ 
+                          min: 1,
+                          style: { 
+                            width: '40px',
+                            textAlign: 'center',
+                            color: getScoreColor(scores[`player${rowIndex - 4}`][hole.number], hole.par),
+                          }
+                        }}
+                      />
+                    </>
                   )}
                 </StyledTableCell>
               ))}
@@ -217,26 +297,35 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
                 )}
               </StyledTableCell>
               {holes.slice(9).map((hole) => (
-                <StyledTableCell key={`${row}-${hole.number}`} align="center">
+                <StyledTableCell 
+                  key={`${row}-${hole.number}`} 
+                  align="center"
+                  sx={{ position: 'relative' }}
+                >
                   {rowIndex === 0 ? hole.number :
                    rowIndex === 1 ? hole.distance :
                    rowIndex === 2 ? hole.par :
                    rowIndex === 3 ? hole.strokeIndex : (
-                    <TextField
-                      size="small"
-                      type="number"
-                      variant="standard"
-                      value={scores[`player${rowIndex - 4}`][hole.number] ?? ''}
-                      onChange={(e) => handleScoreChange(rowIndex - 4, hole.number, e.target.value)}
-                      inputProps={{ 
-                        min: 1,
-                        style: { 
-                          width: '40px',
-                          textAlign: 'center',
-                          color: getScoreColor(scores[`player${rowIndex - 4}`][hole.number], hole.par),
-                        }
-                      }}
-                    />
+                    <>
+                      <StyledStars>
+                        {'★'.repeat(getHandicapStrokes(handicaps[`player${rowIndex - 4}`], hole.strokeIndex, holes))}
+                      </StyledStars>
+                      <TextField
+                        size="small"
+                        type="number"
+                        variant="standard"
+                        value={scores[`player${rowIndex - 4}`][hole.number] ?? ''}
+                        onChange={(e) => handleScoreChange(rowIndex - 4, hole.number, e.target.value)}
+                        inputProps={{ 
+                          min: 1,
+                          style: { 
+                            width: '40px',
+                            textAlign: 'center',
+                            color: getScoreColor(scores[`player${rowIndex - 4}`][hole.number], hole.par),
+                          }
+                        }}
+                      />
+                    </>
                   )}
                 </StyledTableCell>
               ))}
