@@ -11,13 +11,18 @@ export default defineConfig(({ mode }) => {
   const isProduction = mode === 'production';
   const isPreview = mode === 'preview';
 
+  // Default to local API in development, use environment variable in production
+  const apiUrl = isProduction 
+    ? env.VITE_API_URL 
+    : 'http://localhost:8080';
+
   return {
     plugins: [react()],
     server: {
       port: 3000,
       proxy: {
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:8080',
+          target: apiUrl,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },
@@ -27,6 +32,7 @@ export default defineConfig(({ mode }) => {
       __DEBUG__: env.VITE_DEBUG === 'true',
       __LOG_LEVEL__: JSON.stringify(env.VITE_LOG_LEVEL || 'error'),
       __ENV__: JSON.stringify(env.VITE_ENV || mode),
+      __API_URL__: JSON.stringify(apiUrl),
     },
     build: {
       sourcemap: !isProduction,
