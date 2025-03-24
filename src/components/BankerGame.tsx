@@ -79,7 +79,7 @@ export const BankerGame: React.FC<BankerGameProps> = ({
       if (playerScore === null || bankerScore === null) return;
 
       let points = setup.dots;
-      if (setup.doubles[setup.banker]) points *= 2;
+      if (setup.banker && setup.doubles[setup.banker]) points *= 2;
       if (setup.doubles[player.id]) points *= 2;
 
       if (bankerScore < playerScore) {

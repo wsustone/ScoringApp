@@ -5,7 +5,11 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
+  // Loads .env, .env.local, and .env.[mode] files
   const env = loadEnv(mode, process.cwd(), '');
+  
+  const isProduction = mode === 'production';
+  const isPreview = mode === 'preview';
 
   return {
     plugins: [react()],
@@ -16,6 +20,23 @@ export default defineConfig(({ mode }) => {
           target: env.VITE_API_URL || 'http://localhost:8080',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
+    },
+    define: {
+      __DEBUG__: env.VITE_DEBUG === 'true',
+      __LOG_LEVEL__: JSON.stringify(env.VITE_LOG_LEVEL || 'error'),
+      __ENV__: JSON.stringify(env.VITE_ENV || mode),
+    },
+    build: {
+      sourcemap: !isProduction,
+      minify: isProduction,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vendor: ['react', 'react-dom', 'react-router-dom'],
+            mui: ['@mui/material', '@mui/icons-material'],
+          },
         },
       },
     },
