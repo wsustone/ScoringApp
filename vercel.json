@@ -18,6 +18,21 @@
   ],
   "github": {
     "enabled": true,
-    "silent": true
+    "silent": true,
+    "autoAlias": true,
+    "branches": [
+      "main",
+      "develop",
+      "feature/**",
+      "release/**"
+    ]
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "develop": true,
+      "feature/**": true,
+      "release/**": true
+    }
   }
 }
