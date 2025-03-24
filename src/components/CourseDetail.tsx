@@ -27,6 +27,10 @@ interface TeeSet {
   back9Holes: Hole[];
 }
 
+interface ExtendedTeeSet extends TeeSet {
+  type: 'men' | 'lady';
+}
+
 interface CourseTees {
   menTees: TeeSet[];
   ladyTees: TeeSet[];
@@ -39,25 +43,39 @@ interface Hole {
   distance: number;
 }
 
-interface ExtendedTeeSet extends TeeSet {
-  type: 'men' | 'lady';
-}
-
 export const CourseDetail: React.FC = () => {
-  const [selectedCourse, setSelectedCourse] = useState('');
-  const [selectedTee, setSelectedTee] = useState('');
+  const [selectedCourse, setSelectedCourse] = useState<string>('');
+  const [selectedTee, setSelectedTee] = useState<string>('');
 
-  const { data: coursesData, loading: coursesLoading } = useQuery(GET_COURSES);
+  const { data: coursesData, loading: coursesLoading, error: coursesError } = useQuery(GET_COURSES);
   
-  const { data: teesData, loading: teesLoading } = useQuery(GET_COURSE_TEES, {
+  React.useEffect(() => {
+    console.log('Courses Data:', coursesData);
+    console.log('Courses Loading:', coursesLoading);
+    console.log('Courses Error:', coursesError);
+  }, [coursesData, coursesLoading, coursesError]);
+
+  const { data: teesData, loading: teesLoading, error: teesError } = useQuery(GET_COURSE_TEES, {
     variables: { name: selectedCourse },
     skip: !selectedCourse,
   });
 
-  const { data: courseDetail, loading: detailLoading } = useQuery(GET_COURSE_DETAIL, {
+  React.useEffect(() => {
+    console.log('Tees Data:', teesData);
+    console.log('Tees Loading:', teesLoading);
+    console.log('Tees Error:', teesError);
+  }, [teesData, teesLoading, teesError]);
+
+  const { data: courseDetail, loading: detailLoading, error: detailError } = useQuery(GET_COURSE_DETAIL, {
     variables: { name: selectedCourse },
     skip: !selectedCourse || !selectedTee,
   });
+
+  React.useEffect(() => {
+    console.log('Course Detail Data:', courseDetail);
+    console.log('Course Detail Loading:', detailLoading);
+    console.log('Course Detail Error:', detailError);
+  }, [courseDetail, detailLoading, detailError]);
 
   const handleCourseChange = (event: SelectChangeEvent<string>) => {
     setSelectedCourse(event.target.value);
@@ -71,8 +89,8 @@ export const CourseDetail: React.FC = () => {
   const getAllTees = (teesData?: { courseTees: CourseTees }): ExtendedTeeSet[] => {
     if (!teesData) return [];
     const allTees = [
-      ...teesData.courseTees.menTees.map(tee => ({ ...tee, type: 'men' as const })),
-      ...teesData.courseTees.ladyTees.map(tee => ({ ...tee, type: 'lady' as const }))
+      ...teesData.courseTees.menTees.map((tee: TeeSet) => ({ ...tee, type: 'men' as const })),
+      ...teesData.courseTees.ladyTees.map((tee: TeeSet) => ({ ...tee, type: 'lady' as const }))
     ];
     return allTees;
   };
@@ -82,7 +100,7 @@ export const CourseDetail: React.FC = () => {
     const teeType = selectedTee.split('-')[0];
     const teeName = selectedTee.split('-')[1];
     const tees = teeType === 'men' ? courseDetail.course.menTees : courseDetail.course.ladyTees;
-    const selectedTeeSet = tees.find(tee => tee.name === teeName);
+    const selectedTeeSet = tees.find((tee: TeeSet) => tee.name === teeName);
     
     if (!selectedTeeSet) return [];
     return [...selectedTeeSet.front9Holes, ...selectedTeeSet.back9Holes];
@@ -121,7 +139,7 @@ export const CourseDetail: React.FC = () => {
               label="Select Tee"
               disabled={teesLoading}
             >
-              {getAllTees(teesData).map((tee) => (
+              {getAllTees(teesData).map((tee: ExtendedTeeSet) => (
                 <MenuItem key={`${tee.type}-${tee.name}`} value={`${tee.type}-${tee.name}`}>
                   {tee.name} ({tee.type === 'men' ? "Men's" : "Ladies'"})
                 </MenuItem>
