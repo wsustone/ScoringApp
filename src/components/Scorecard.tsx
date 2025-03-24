@@ -116,9 +116,27 @@ const getHandicapStrokes = (handicap: number | null, strokeIndex: number, holes:
   return strokes;
 };
 
+const getPlayerNetScore = (playerIndex: number, start: number, end: number, scores: { [key: string]: { [key: number]: number | null } }, handicaps: { [key: string]: number | null }, holes: Hole[]): number | null => {
+  const grossScore = calculatePlayerSum(scores[`player${playerIndex}`], start, end);
+  if (grossScore === null) return null;
+
+  const handicap = handicaps[`player${playerIndex}`];
+  if (handicap === null) return grossScore;
+
+  // Calculate total handicap strokes for this range
+  let handicapStrokes = 0;
+  for (const hole of holes) {
+    if (hole.number >= start && hole.number <= end) {
+      handicapStrokes += getHandicapStrokes(handicap, hole.strokeIndex, holes);
+    }
+  }
+
+  return grossScore - handicapStrokes;
+};
+
 export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
   const playerNames = Array(4).fill('');
-  const rows = ['Hole', 'Distance', 'Par', 'SI', ...playerNames.map((_, i) => `Player ${i + 1}`)];
+  const rows = ['Hole', 'Dist', 'Par', 'SI', ...playerNames.map((_, i) => `Player ${i + 1}`)];
   
   // Create a state object for each player's scores and handicaps
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>(
@@ -181,9 +199,39 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
       component={Paper} 
       sx={{ 
         mt: 2,
+        maxWidth: '100%',
+        width: { xs: 'max-content', md: '100%' },
+        overflow: 'auto',
         '& .MuiPaper-root': {
           border: '2px solid rgba(0, 0, 0, 0.3)',
           boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          width: '100%',
+        },
+        '& .MuiTable-root': {
+          minWidth: '100%',
+          tableLayout: 'fixed',
+          width: '100%',
+        },
+        '& .MuiTableCell-root': {
+          minWidth: '60px',
+          width: 'auto',
+          padding: '8px 4px',
+          '&:first-of-type': {
+            minWidth: '80px',
+            paddingLeft: '8px',
+          },
+          '&.divider': {
+            minWidth: '70px',
+          },
+          '&.header': {
+            backgroundColor: '#f5f5f5',
+            fontWeight: 'bold',
+          },
+        },
+        '& .MuiTextField-root': {
+          width: '100%',
+          maxWidth: '60px',
+          margin: '0 auto',
         },
       }}
     >
@@ -198,13 +246,16 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
               </StyledTableCell>
             ))}
             <StyledTableCell align="center" className="divider header">In</StyledTableCell>
+            <StyledTableCell align="center" className="header">Net</StyledTableCell>
             {holes.slice(9).map((hole) => (
               <StyledTableCell key={hole.number} align="center" className="header">
                 {hole.number}
               </StyledTableCell>
             ))}
             <StyledTableCell align="center" className="divider header">Out</StyledTableCell>
+            <StyledTableCell align="center" className="header">Net</StyledTableCell>
             <StyledTableCell align="center" className="header">Total</StyledTableCell>
+            <StyledTableCell align="center" className="header">Net</StyledTableCell>
           </StyledTableRow>
         </TableHead>
         <TableBody>
@@ -296,6 +347,23 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
                   ) : ''
                 )}
               </StyledTableCell>
+              <StyledTableCell align="center">
+                {rowIndex >= 4 ? (
+                  <TextField
+                    size="small"
+                    type="number"
+                    variant="standard"
+                    value={getPlayerNetScore(rowIndex - 4, 1, 9, scores, handicaps, holes) ?? ''}
+                    inputProps={{ 
+                      style: { 
+                        width: '40px',
+                        textAlign: 'center',
+                      }
+                    }}
+                    disabled
+                  />
+                ) : ''}
+              </StyledTableCell>
               {holes.slice(9).map((hole) => (
                 <StyledTableCell 
                   key={`${row}-${hole.number}`} 
@@ -353,6 +421,23 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
                 )}
               </StyledTableCell>
               <StyledTableCell align="center">
+                {rowIndex >= 4 ? (
+                  <TextField
+                    size="small"
+                    type="number"
+                    variant="standard"
+                    value={getPlayerNetScore(rowIndex - 4, 10, 18, scores, handicaps, holes) ?? ''}
+                    inputProps={{ 
+                      style: { 
+                        width: '40px',
+                        textAlign: 'center',
+                      }
+                    }}
+                    disabled
+                  />
+                ) : ''}
+              </StyledTableCell>
+              <StyledTableCell align="center">
                 {rowIndex === 1 ? calculateSum(holes, 1, 18, 'distance') :
                  rowIndex === 2 ? calculateSum(holes, 1, 18, 'par') :
                  rowIndex === 3 ? '' : (
@@ -374,6 +459,23 @@ export const Scorecard: React.FC<ScorecardProps> = ({ holes }) => {
                     />
                   ) : ''
                 )}
+              </StyledTableCell>
+              <StyledTableCell align="center">
+                {rowIndex >= 4 ? (
+                  <TextField
+                    size="small"
+                    type="number"
+                    variant="standard"
+                    value={getPlayerNetScore(rowIndex - 4, 1, 18, scores, handicaps, holes) ?? ''}
+                    inputProps={{ 
+                      style: { 
+                        width: '40px',
+                        textAlign: 'center',
+                      }
+                    }}
+                    disabled
+                  />
+                ) : ''}
               </StyledTableCell>
             </StyledTableRow>
           ))}

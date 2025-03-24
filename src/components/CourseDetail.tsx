@@ -115,29 +115,29 @@ export const CourseDetail: React.FC = () => {
           Golf Score Card
         </Typography>
         
-        <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Select Course</InputLabel>
-          <Select
-            value={selectedCourse}
-            onChange={handleCourseChange}
-            label="Select Course"
-          >
-            {coursesData?.courses.map((course: Course) => (
-              <MenuItem key={course.name} value={course.name}>
-                {course.name.replace(/_/g, ' ')}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+          <FormControl fullWidth sx={{ minWidth: 200 }}>
+            <InputLabel>Select Course</InputLabel>
+            <Select
+              value={selectedCourse}
+              onChange={handleCourseChange}
+              label="Select Course"
+            >
+              {coursesData?.courses.map((course: Course) => (
+                <MenuItem key={course.name} value={course.name}>
+                  {course.name.replace(/_/g, ' ')}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
 
-        {selectedCourse && (
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControl fullWidth sx={{ minWidth: 120 }}>
             <InputLabel>Select Tee</InputLabel>
             <Select
               value={selectedTee}
               onChange={handleTeeChange}
               label="Select Tee"
-              disabled={teesLoading}
+              disabled={!selectedCourse || teesLoading}
             >
               {getAllTees(teesData).map((tee: ExtendedTeeSet) => (
                 <MenuItem key={`${tee.type}-${tee.name}`} value={`${tee.type}-${tee.name}`}>
@@ -146,7 +146,7 @@ export const CourseDetail: React.FC = () => {
               ))}
             </Select>
           </FormControl>
-        )}
+        </Box>
 
         {selectedTee && !detailLoading && (
           <Scorecard holes={getSelectedTeeHoles()} />
