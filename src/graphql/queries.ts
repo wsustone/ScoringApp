@@ -5,6 +5,13 @@ export const GET_COURSES = gql`
     courses {
       name
       location
+    }
+  }
+`;
+
+export const GET_COURSE_TEES = gql`
+  query GetCourseTees($name: String!) {
+    courseTees(name: $name) {
       menTees {
         name
         courseRating
@@ -19,8 +26,8 @@ export const GET_COURSES = gql`
   }
 `;
 
-export const GET_COURSE = gql`
-  query GetCourse($name: String!) {
+export const GET_COURSE_DETAIL = gql`
+  query GetCourseDetail($name: String!) {
     course(name: $name) {
       name
       location

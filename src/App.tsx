@@ -1,8 +1,6 @@
 import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, CssBaseline, AppBar, Toolbar, Typography } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
-import { CourseList } from './components/CourseList';
 import { CourseDetail } from './components/CourseDetail';
 
 // Create Apollo Client
@@ -29,19 +27,14 @@ function App() {
     <ApolloProvider client={client}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Router>
-          <AppBar position="static">
-            <Toolbar>
-              <Typography variant="h6" component="div">
-                Golf Scoring App
-              </Typography>
-            </Toolbar>
-          </AppBar>
-          <Routes>
-            <Route path="/" element={<CourseList />} />
-            <Route path="/course/:name" element={<CourseDetail />} />
-          </Routes>
-        </Router>
+        <AppBar position="static">
+          <Toolbar>
+            <Typography variant="h6">
+              Golf Scoring App
+            </Typography>
+          </Toolbar>
+        </AppBar>
+        <CourseDetail />
       </ThemeProvider>
     </ApolloProvider>
   );

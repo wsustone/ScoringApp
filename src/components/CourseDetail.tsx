@@ -1,111 +1,139 @@
+import React, { useState } from 'react';
 import { useQuery } from '@apollo/client';
-import { useParams } from 'react-router-dom';
-import { GET_COURSE } from '../graphql/queries';
-import { GolfCourse, Hole } from '../graphql/types';
-import { Box, Typography, Table, TableBody, TableCell, TableHead, TableRow, Paper, CircularProgress, Tabs, Tab } from '@mui/material';
-import { useState } from 'react';
+import { GET_COURSES, GET_COURSE_TEES, GET_COURSE_DETAIL } from '../graphql/queries';
+import {
+  Container,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Box,
+  Typography,
+  CircularProgress,
+  SelectChangeEvent,
+} from '@mui/material';
+import { Scorecard } from './Scorecard';
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
+interface Course {
+  name: string;
+  location: string;
 }
 
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
+interface TeeSet {
+  name: string;
+  courseRating: number;
+  slopeRating: number;
+  front9Holes: Hole[];
+  back9Holes: Hole[];
 }
 
-function HoleTable({ holes }: { holes: Hole[] }) {
-  return (
-    <Table size="small">
-      <TableHead>
-        <TableRow>
-          <TableCell>Hole</TableCell>
-          <TableCell>Par</TableCell>
-          <TableCell>Stroke Index</TableCell>
-          <TableCell>Distance (yards)</TableCell>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {holes.map((hole) => (
-          <TableRow key={hole.number}>
-            <TableCell>{hole.number}</TableCell>
-            <TableCell>{hole.par}</TableCell>
-            <TableCell>{hole.strokeIndex}</TableCell>
-            <TableCell>{hole.distance}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
+interface CourseTees {
+  menTees: TeeSet[];
+  ladyTees: TeeSet[];
 }
 
-export const CourseDetail = () => {
-  const { name } = useParams<{ name: string }>();
-  const [selectedTee, setSelectedTee] = useState(0);
-  const { loading, error, data } = useQuery<{ course: GolfCourse }>(GET_COURSE, {
-    variables: { name },
+interface Hole {
+  number: number;
+  par: number;
+  strokeIndex: number;
+  distance: number;
+}
+
+interface ExtendedTeeSet extends TeeSet {
+  type: 'men' | 'lady';
+}
+
+export const CourseDetail: React.FC = () => {
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedTee, setSelectedTee] = useState('');
+
+  const { data: coursesData, loading: coursesLoading } = useQuery(GET_COURSES);
+  
+  const { data: teesData, loading: teesLoading } = useQuery(GET_COURSE_TEES, {
+    variables: { name: selectedCourse },
+    skip: !selectedCourse,
   });
 
-  if (loading) return <CircularProgress />;
-  if (error) return <Typography color="error">Error: {error.message}</Typography>;
-  if (!data?.course) return <Typography>Course not found</Typography>;
+  const { data: courseDetail, loading: detailLoading } = useQuery(GET_COURSE_DETAIL, {
+    variables: { name: selectedCourse },
+    skip: !selectedCourse || !selectedTee,
+  });
 
-  const { course } = data;
-  const allTees = [...course.menTees, ...course.ladyTees];
+  const handleCourseChange = (event: SelectChangeEvent<string>) => {
+    setSelectedCourse(event.target.value);
+    setSelectedTee('');
+  };
+
+  const handleTeeChange = (event: SelectChangeEvent<string>) => {
+    setSelectedTee(event.target.value);
+  };
+
+  const getAllTees = (teesData?: { courseTees: CourseTees }): ExtendedTeeSet[] => {
+    if (!teesData) return [];
+    const allTees = [
+      ...teesData.courseTees.menTees.map(tee => ({ ...tee, type: 'men' as const })),
+      ...teesData.courseTees.ladyTees.map(tee => ({ ...tee, type: 'lady' as const }))
+    ];
+    return allTees;
+  };
+
+  const getSelectedTeeHoles = () => {
+    if (!courseDetail?.course) return [];
+    const teeType = selectedTee.split('-')[0];
+    const teeName = selectedTee.split('-')[1];
+    const tees = teeType === 'men' ? courseDetail.course.menTees : courseDetail.course.ladyTees;
+    const selectedTeeSet = tees.find(tee => tee.name === teeName);
+    
+    if (!selectedTeeSet) return [];
+    return [...selectedTeeSet.front9Holes, ...selectedTeeSet.back9Holes];
+  };
+
+  if (coursesLoading) return <CircularProgress />;
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        {course.name}
-      </Typography>
-      <Typography variant="subtitle1" gutterBottom>
-        Location: {course.location}
-      </Typography>
+    <Container>
+      <Box sx={{ my: 4 }}>
+        <Typography variant="h4" gutterBottom>
+          Golf Score Card
+        </Typography>
+        
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Select Course</InputLabel>
+          <Select
+            value={selectedCourse}
+            onChange={handleCourseChange}
+            label="Select Course"
+          >
+            {coursesData?.courses.map((course: Course) => (
+              <MenuItem key={course.name} value={course.name}>
+                {course.name.replace(/_/g, ' ')}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs value={selectedTee} onChange={(_, newValue) => setSelectedTee(newValue)}>
-          {allTees.map((tee, index) => (
-            <Tab key={tee.name} label={tee.name} />
-          ))}
-        </Tabs>
+        {selectedCourse && (
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Select Tee</InputLabel>
+            <Select
+              value={selectedTee}
+              onChange={handleTeeChange}
+              label="Select Tee"
+              disabled={teesLoading}
+            >
+              {getAllTees(teesData).map((tee) => (
+                <MenuItem key={`${tee.type}-${tee.name}`} value={`${tee.type}-${tee.name}`}>
+                  {tee.name} ({tee.type === 'men' ? "Men's" : "Ladies'"})
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+
+        {selectedTee && !detailLoading && (
+          <Scorecard holes={getSelectedTeeHoles()} />
+        )}
       </Box>
-
-      {allTees.map((tee, index) => (
-        <TabPanel key={tee.name} value={selectedTee} index={index}>
-          <Typography variant="h6" gutterBottom>
-            Course Rating: {tee.courseRating} | Slope Rating: {tee.slopeRating}
-          </Typography>
-          
-          <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
-            Front Nine
-          </Typography>
-          <Paper sx={{ mb: 2 }}>
-            <HoleTable holes={tee.front9Holes} />
-          </Paper>
-
-          <Typography variant="h6" gutterBottom>
-            Back Nine
-          </Typography>
-          <Paper>
-            <HoleTable holes={tee.back9Holes} />
-          </Paper>
-        </TabPanel>
-      ))}
-    </Box>
+    </Container>
   );
 };
