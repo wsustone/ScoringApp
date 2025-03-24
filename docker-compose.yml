@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  scoring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=http://scoring-engine.327165573193.us-west-2.amazonaws.com:8080
+    networks:
+      - scoring-network
+
+networks:
+  scoring-network:
+    driver: bridge
