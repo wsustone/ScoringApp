@@ -9,6 +9,7 @@ import {
   Typography,
   Paper,
   Alert,
+  Divider,
 } from '@mui/material';
 import { BankerGame } from './BankerGame';
 
@@ -59,7 +60,7 @@ export const Game: React.FC<GameProps> = ({
   holeSetups,
   onHoleSetupChange,
 }) => {
-  const [selectedGame, setSelectedGame] = useState<GameType | ''>('');
+  const [selectedGame, setSelectedGame] = useState<GameType>('banker');
 
   const handleGameChange = (event: SelectChangeEvent<string>) => {
     setSelectedGame(event.target.value as GameType);
@@ -74,42 +75,48 @@ export const Game: React.FC<GameProps> = ({
   };
 
   return (
-    <Box sx={{ mt: 3 }}>
-      <Typography variant="h6" gutterBottom>
-        Game Options
-      </Typography>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>Select Game</InputLabel>
-          <Select
-            value={selectedGame}
-            label="Select Game"
-            onChange={handleGameChange}
-          >
-            {Object.entries(gameRules).map(([value, { name }]) => (
-              <MenuItem key={value} value={value}>
-                {name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        {selectedGame && (
-          <Paper sx={{ p: 2, flex: 1, maxWidth: 600 }}>
-            <Typography variant="subtitle1" gutterBottom>
+    <Box>
+      <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+        <Box sx={{ minWidth: 200 }}>
+          <Typography variant="h6" gutterBottom>
+            Game Options
+          </Typography>
+          <FormControl fullWidth>
+            <InputLabel>Select Game</InputLabel>
+            <Select
+              value={selectedGame}
+              label="Select Game"
+              onChange={handleGameChange}
+            >
+              {Object.entries(gameRules).map(([value, { name }]) => (
+                <MenuItem key={value} value={value}>
+                  {name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+
+        <Box sx={{ flex: 1 }}>
+          <Paper sx={{ p: 3 }}>
+            <Typography variant="h6" gutterBottom>
               {gameRules[selectedGame].name}
             </Typography>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
+            <Typography variant="body1" paragraph>
               {gameRules[selectedGame].description}
             </Typography>
             {getPlayerWarning(selectedGame) && (
-              <Alert severity="warning" sx={{ mt: 1 }}>
+              <Alert severity="warning">
                 {getPlayerWarning(selectedGame)}
               </Alert>
             )}
           </Paper>
-        )}
+        </Box>
       </Box>
-      {selectedGame === 'banker' && (
+
+      <Divider sx={{ my: 3 }} />
+
+      {selectedGame === 'banker' && !getPlayerWarning(selectedGame) && (
         <BankerGame
           scores={scores}
           playerCount={playerCount}
@@ -117,6 +124,12 @@ export const Game: React.FC<GameProps> = ({
           holeSetups={holeSetups}
           onHoleSetupChange={onHoleSetupChange}
         />
+      )}
+
+      {selectedGame === 'banker' && getPlayerWarning(selectedGame) && (
+        <Typography variant="body1" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+          Add more players to start the Banker game
+        </Typography>
       )}
     </Box>
   );
