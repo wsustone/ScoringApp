@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     server: {
-      port: 3000,
+      port: 5173,
       proxy: {
         '/api': {
           target: apiUrl,
@@ -35,16 +35,21 @@ export default defineConfig(({ mode }) => {
       __API_URL__: JSON.stringify(apiUrl),
     },
     build: {
+      outDir: 'dist',
+      assetsDir: 'assets',
+      manifest: true,
       sourcemap: !isProduction,
       minify: isProduction,
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
-            mui: ['@mui/material', '@mui/icons-material'],
+            vendor: ['react', 'react-dom', '@apollo/client', '@mui/material'],
           },
         },
       },
+    },
+    optimizeDeps: {
+      include: ['react', 'react-dom', '@apollo/client', '@mui/material'],
     },
     test: {
       globals: true,
