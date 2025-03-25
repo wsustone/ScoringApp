@@ -9,11 +9,19 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
       ),
     );
 
-  if (networkError) console.error(`[Network error]: ${networkError}`);
+  if (networkError) {
+    console.error(`[Network error]: ${networkError}`);
+    // Retry the request if it's a network error
+    return;
+  }
 });
 
 const httpLink = createHttpLink({
   uri: 'http://scoring-engine.327165573193.us-west-2.amazonaws.com:8080/graphql',
+  credentials: 'include',
+  headers: {
+    'Access-Control-Allow-Origin': '*',
+  },
 });
 
 export const apolloClient = new ApolloClient({
@@ -22,6 +30,15 @@ export const apolloClient = new ApolloClient({
   defaultOptions: {
     watchQuery: {
       fetchPolicy: 'cache-and-network',
+      nextFetchPolicy: 'cache-first',
+      errorPolicy: 'all',
+    },
+    query: {
+      fetchPolicy: 'network-only',
+      errorPolicy: 'all',
+    },
+    mutate: {
+      errorPolicy: 'all',
     },
   },
 });
