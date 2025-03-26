@@ -3,6 +3,7 @@ import { Game } from '../components/Game';
 import { Player, PlayerForm } from '../components/PlayerForm';
 import { HoleSetup } from '../types/game';
 import { Box, Paper, Tab, Tabs } from '@mui/material';
+import { Scorecard } from '../components/Scorecard';
 
 export const GamePage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -27,11 +28,15 @@ export const GamePage = () => {
 
   const handlePlayerChange = (updatedPlayers: Player[]) => {
     setPlayers(updatedPlayers);
-    // Initialize scores for new players
+    // Initialize scores for new players with all holes set to null
     const newScores = { ...scores };
     updatedPlayers.forEach(player => {
       if (!newScores[player.id]) {
         newScores[player.id] = {};
+        // Initialize all holes with null scores
+        for (let i = 1; i <= 18; i++) {
+          newScores[player.id][i] = null;
+        }
       }
     });
     setScores(newScores);
@@ -45,11 +50,22 @@ export const GamePage = () => {
     setSelectedTab(newValue);
   };
 
+  const handleScoreChange = (playerId: string, hole: number, score: number | null) => {
+    setScores(prev => ({
+      ...prev,
+      [playerId]: {
+        ...prev[playerId],
+        [hole]: score
+      }
+    }));
+  };
+
   return (
     <Box sx={{ width: '100%', p: 2 }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
         <Tabs value={selectedTab} onChange={handleTabChange} centered>
           <Tab label="Players" />
+          <Tab label="Scorecard" disabled={!selectedCourseId || players.length === 0} />
           <Tab label="Game" disabled={!selectedCourseId || players.length === 0} />
         </Tabs>
       </Paper>
@@ -64,21 +80,23 @@ export const GamePage = () => {
       )}
 
       {selectedTab === 1 && (
+        <Scorecard
+          holes={defaultHoles}
+          players={players}
+          scores={scores}
+          onScoreChange={handleScoreChange}
+          selectedCourseId={selectedCourseId}
+        />
+      )}
+
+      {selectedTab === 2 && (
         <Game
           holes={defaultHoles}
           players={players}
           scores={scores}
           holeSetups={holeSetups}
           onHoleSetupChange={handleHoleSetupChange}
-          onScoreChange={(playerId: string, hole: number, score: number | null) => {
-            setScores(prev => ({
-              ...prev,
-              [playerId]: {
-                ...prev[playerId],
-                [hole]: score
-              }
-            }));
-          }}
+          onScoreChange={handleScoreChange}
           selectedCourseId={selectedCourseId}
           setSelectedCourseId={setSelectedCourseId}
         />

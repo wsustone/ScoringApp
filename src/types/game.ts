@@ -1,22 +1,31 @@
-export interface HoleSetup {
-  banker: string | null;
-  dots: number;
-  doubles: { [playerId: string]: boolean };
-  pin: string | null;
-  teeBox: string | null;
-}
-
-export interface Hole {
+export interface GolfHole {
+  id?: string;
   number: number;
   par: number;
   strokeIndex: number;
+  distance?: number;
 }
 
-export interface Player {
+export interface GolfTee {
   id: string;
   name: string;
-  handicap: number;
-  teeId: string;
+  gender: string;
+  courseRating: number;
+  slopeRating: number;
+  holes?: GolfHole[];
+}
+
+export interface GolfCourse {
+  id: string;
+  name: string;
+  location: string;
+  tees: GolfTee[];
+}
+
+export interface HoleSetup {
+  banker: string | undefined;
+  dots: number;
+  doubles: { [key: string]: boolean };
 }
 
 export type GameType = 'banker' | 'mrpar' | 'wolf';

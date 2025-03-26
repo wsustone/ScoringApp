@@ -6,6 +6,13 @@ export const GET_GOLF_COURSES = gql`
       id
       name
       location
+      tees {
+        id
+        name
+        gender
+        courseRating
+        slopeRating
+      }
     }
   }
 `;

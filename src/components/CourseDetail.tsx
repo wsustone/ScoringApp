@@ -5,11 +5,6 @@ import {
   CircularProgress, 
   Typography, 
   Box, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableRow, 
   Container, 
   Tabs, 
   Tab 
@@ -18,8 +13,7 @@ import { useState } from 'react';
 import { Scorecard } from './Scorecard';
 import { Game } from './Game';
 import { PlayerForm, Player } from './PlayerForm';
-import { TeeSet, Hole } from '../graphql/types';
-import { HoleSetup } from '../types/game';
+import { GolfHole, HoleSetup } from '../types/game';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -94,7 +88,7 @@ export const CourseDetail = () => {
   if (!data?.golfCourse) return <Typography>Course not found</Typography>;
 
   const course = data.golfCourse;
-  const holes = [...course.menTees[0].front9Holes, ...course.menTees[0].back9Holes];
+  const holes: GolfHole[] = course.tees?.[0]?.holes || [];
 
   return (
     <Container maxWidth="lg">
@@ -122,6 +116,7 @@ export const CourseDetail = () => {
             players={players}
             scores={scores}
             onScoreChange={handleScoreChange}
+            selectedCourseId={selectedCourseId}
           />
         </TabPanel>
 
@@ -132,15 +127,7 @@ export const CourseDetail = () => {
             scores={scores}
             holeSetups={holeSetups}
             onHoleSetupChange={handleHoleSetupChange}
-            onScoreChange={(playerId: string, hole: number, score: number | null) => {
-              setScores(prev => ({
-                ...prev,
-                [playerId]: {
-                  ...prev[playerId],
-                  [hole]: score
-                }
-              }));
-            }}
+            onScoreChange={handleScoreChange}
             selectedCourseId={selectedCourseId}
             setSelectedCourseId={setSelectedCourseId}
           />
@@ -150,45 +137,9 @@ export const CourseDetail = () => {
           <Typography variant="h4" gutterBottom>
             {course.name}
           </Typography>
-          <Typography variant="h6" gutterBottom>
-            Location: {course.location}
+          <Typography variant="subtitle1" gutterBottom>
+            {course.location}
           </Typography>
-
-          {course.menTees.map((tee: TeeSet) => (
-            <Box key={tee.name} sx={{ mt: 4 }}>
-              <Typography variant="h5" gutterBottom>
-                {tee.name} (Men)
-              </Typography>
-              <Typography>
-                Course Rating: {tee.courseRating} | Slope Rating: {tee.slopeRating}
-              </Typography>
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="h6" gutterBottom>
-                  Front 9
-                </Typography>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Hole</TableCell>
-                      <TableCell>Par</TableCell>
-                      <TableCell>Distance</TableCell>
-                      <TableCell>SI</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {tee.front9Holes.map((hole: Hole) => (
-                      <TableRow key={hole.number}>
-                        <TableCell>{hole.number}</TableCell>
-                        <TableCell>{hole.par}</TableCell>
-                        <TableCell>{hole.distance}</TableCell>
-                        <TableCell>{hole.strokeIndex}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
-            </Box>
-          ))}
         </Box>
       </Box>
     </Container>

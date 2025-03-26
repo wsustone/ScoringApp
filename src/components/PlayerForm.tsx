@@ -146,13 +146,6 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
                 onChange={(e) => handlePlayerChange(player.id, 'name', e.target.value)}
                 sx={{ flex: 2 }}
               />
-              <TextField
-                label="Handicap"
-                type="number"
-                value={player.handicap}
-                onChange={(e) => handlePlayerChange(player.id, 'handicap', parseInt(e.target.value) || 0)}
-                sx={{ width: '120px' }}
-              />
               {selectedCourse?.tees && (
                 <FormControl sx={{ width: '180px' }}>
                   <InputLabel>Tee</InputLabel>
@@ -169,6 +162,13 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
                   </Select>
                 </FormControl>
               )}
+              <TextField
+                label="Handicap"
+                type="number"
+                value={player.handicap}
+                onChange={(e) => handlePlayerChange(player.id, 'handicap', parseInt(e.target.value) || 0)}
+                sx={{ width: '120px' }}
+              />
               <IconButton
                 color="error"
                 onClick={() => handleRemovePlayer(player.id)}
