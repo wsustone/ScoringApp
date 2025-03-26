@@ -1,64 +1,29 @@
 import { gql } from '@apollo/client';
 
-export const GET_COURSES = gql`
-  query GetCourses {
-    courses {
+export const GET_GOLF_COURSES = gql`
+  query GetGolfCourses {
+    golfCourses {
+      id
       name
       location
     }
   }
 `;
 
-export const GET_COURSE_TEES = gql`
-  query GetCourseTees($name: String!) {
-    courseTees(name: $name) {
-      menTees {
-        name
-        courseRating
-        slopeRating
-      }
-      ladyTees {
-        name
-        courseRating
-        slopeRating
-      }
-    }
-  }
-`;
-
-export const GET_COURSE_DETAIL = gql`
-  query GetCourseDetail($name: String!) {
-    course(name: $name) {
+export const GET_GOLF_COURSE = gql`
+  query GetGolfCourse($id: ID!) {
+    golfCourse(id: $id) {
+      id
       name
       location
-      menTees {
+      tees {
+        id
         name
+        gender
         courseRating
         slopeRating
-        front9Holes {
-          number
-          par
-          strokeIndex
-          distance
-        }
-        back9Holes {
-          number
-          par
-          strokeIndex
-          distance
-        }
-      }
-      ladyTees {
-        name
-        courseRating
-        slopeRating
-        front9Holes {
-          number
-          par
-          strokeIndex
-          distance
-        }
-        back9Holes {
+        holes {
+          id
           number
           par
           strokeIndex

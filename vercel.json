@@ -5,21 +5,24 @@
       "src": "package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "npm run build",
+        "buildCommand": "npm run build:cloud",
         "outputDirectory": "dist"
       }
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "https://api.yourapp.com/api/$1"
+      "src": "/graphql/(.*)",
+      "dest": "http://scoring-engine.327165573193.us-west-2.amazonaws.com:8080/graphql/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/"
+      "dest": "/index.html"
     }
   ],
+  "env": {
+    "VITE_API_URL": "http://scoring-engine.327165573193.us-west-2.amazonaws.com:8080"
+  },
   "github": {
     "enabled": true,
     "silent": true,

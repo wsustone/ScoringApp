@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
-import {
-  Box,
-  Container,
-  Tab,
-  Tabs,
-  Typography,
-  CircularProgress,
-} from '@mui/material';
-import { useParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
-import { GET_COURSE_DETAILS } from '../queries/courseQueries';
+import { useParams } from 'react-router-dom';
+import { GET_GOLF_COURSE } from '../graphql/queries';
+import { 
+  CircularProgress, 
+  Typography, 
+  Box, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableRow, 
+  Paper, 
+  Container, 
+  Tabs, 
+  Tab 
+} from '@mui/material';
+import { useState } from 'react';
 import { Scorecard } from './Scorecard';
 import { Game } from './Game';
 import { PlayerForm, Player } from './PlayerForm';
-import { Hole, HoleSetup } from '../types';
+import { GolfCourse, HoleSetup } from '../types';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -41,8 +47,8 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-export const CourseDetail: React.FC = () => {
-  const { courseId = '', teeSetId = '' } = useParams<{ courseId: string; teeSetId: string }>();
+export const CourseDetail = () => {
+  const { id } = useParams<{ id: string }>();
   const [selectedTab, setSelectedTab] = useState(0);
   const [players, setPlayers] = useState<Player[]>([
     { id: '1', name: '', handicap: 0 }
@@ -50,12 +56,25 @@ export const CourseDetail: React.FC = () => {
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>({});
   const [holeSetups, setHoleSetups] = useState<{ [key: number]: HoleSetup }>({});
 
-  const { loading, error, data } = useQuery(GET_COURSE_DETAILS, {
-    variables: { courseId, teeSetId },
+  const { loading, error, data } = useQuery<{ golfCourse: GolfCourse }>(GET_GOLF_COURSE, {
+    variables: { id },
+    skip: !id,
   });
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);
+  };
+
+  const handlePlayerChange = (updatedPlayers: Player[]) => {
+    setPlayers(updatedPlayers);
+    // Initialize scores for new players
+    const newScores = { ...scores };
+    updatedPlayers.forEach(player => {
+      if (!newScores[player.id]) {
+        newScores[player.id] = {};
+      }
+    });
+    setScores(newScores);
   };
 
   const handleScoreChange = (playerId: string, holeNumber: number, score: number | null) => {
@@ -80,28 +99,28 @@ export const CourseDetail: React.FC = () => {
 
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">Error: {error.message}</Typography>;
-  if (!data) return <Typography>No data available</Typography>;
+  if (!data?.golfCourse) return <Typography>Course not found</Typography>;
 
-  const holes: Hole[] = data.course.teeSets[0].holes;
+  const course = data.golfCourse;
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ width: '100%', mt: 4 }}>
+      <Box sx={{ width: '100%', mt: 3 }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={selectedTab} onChange={handleTabChange}>
-            <Tab label="Start" />
+          <Tabs value={selectedTab} onChange={handleTabChange} aria-label="course tabs">
+            <Tab label="Players" />
             <Tab label="Scorecard" disabled={players.length === 0} />
             <Tab label="Game" disabled={players.length === 0} />
           </Tabs>
         </Box>
 
         <TabPanel value={selectedTab} index={0}>
-          <PlayerForm players={players} onPlayersChange={setPlayers} />
+          <PlayerForm players={players} onPlayersChange={handlePlayerChange} />
         </TabPanel>
 
         <TabPanel value={selectedTab} index={1}>
           <Scorecard
-            holes={holes}
+            holes={course.tees[0].holes}
             players={players}
             scores={scores}
             onScoreChange={handleScoreChange}
@@ -110,13 +129,56 @@ export const CourseDetail: React.FC = () => {
 
         <TabPanel value={selectedTab} index={2}>
           <Game
-            holes={holes}
+            holes={course.tees[0].holes}
             players={players}
             scores={scores}
             holeSetups={holeSetups}
             onHoleSetupChange={handleHoleSetupChange}
           />
         </TabPanel>
+
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h4" gutterBottom>
+            {course.name}
+          </Typography>
+          <Typography variant="h6" gutterBottom>
+            Location: {course.location}
+          </Typography>
+
+          {course.tees.map((tee) => (
+            <Box key={tee.id} sx={{ mt: 4 }}>
+              <Typography variant="h5" gutterBottom>
+                {tee.name} ({tee.gender})
+              </Typography>
+              <Typography>
+                Course Rating: {tee.courseRating} | Slope Rating: {tee.slopeRating}
+              </Typography>
+
+              <Paper sx={{ mt: 2, overflowX: 'auto' }}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Hole</TableCell>
+                      <TableCell>Par</TableCell>
+                      <TableCell>Stroke Index</TableCell>
+                      <TableCell>Distance</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {tee.holes.map((hole) => (
+                      <TableRow key={hole.number}>
+                        <TableCell>{hole.number}</TableCell>
+                        <TableCell>{hole.par}</TableCell>
+                        <TableCell>{hole.strokeIndex}</TableCell>
+                        <TableCell>{hole.distance}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Paper>
+            </Box>
+          ))}
+        </Box>
       </Box>
     </Container>
   );

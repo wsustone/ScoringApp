@@ -1,64 +1,43 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-/// <reference types="vitest" />
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
-  // Load env file based on `mode` in the current working directory.
-  // Loads .env, .env.local, and .env.[mode] files
-  const env = loadEnv(mode, process.cwd(), '');
-  
-  const isProduction = mode === 'production';
-  const isPreview = mode === 'preview';
-
-  // Default to local API in development, use environment variable in production
-  const apiUrl = isProduction 
-    ? env.VITE_API_URL 
-    : 'http://localhost:8080';
-
-  return {
-    plugins: [react()],
-    server: {
-      port: 5173,
-      proxy: {
-        '/api': {
-          target: apiUrl,
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, ''),
-        },
+export default defineConfig({
+  plugins: [react()],
+  base: './', // Ensure assets are loaded relative to index.html
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
-    define: {
-      __DEBUG__: env.VITE_DEBUG === 'true',
-      __LOG_LEVEL__: JSON.stringify(env.VITE_LOG_LEVEL || 'error'),
-      __ENV__: JSON.stringify(env.VITE_ENV || mode),
-      __API_URL__: JSON.stringify(apiUrl),
-    },
-    build: {
-      outDir: 'dist',
-      assetsDir: 'assets',
-      manifest: true,
-      sourcemap: !isProduction,
-      minify: isProduction,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            vendor: ['react', 'react-dom', '@apollo/client', '@mui/material'],
-          },
-        },
+  },
+  preview: {
+    port: 4173,
+  },
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    manifest: true,
+    rollupOptions: {
+      output: {
+        format: 'es',
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
-    optimizeDeps: {
-      include: ['react', 'react-dom', '@apollo/client', '@mui/material'],
-    },
-    test: {
-      globals: true,
-      environment: 'jsdom',
-      setupFiles: './src/test/setup.ts',
-      coverage: {
-        provider: 'v8',
-        reporter: ['text', 'json', 'html'],
-      },
-    },
-  };
+  },
+  define: {
+    __DEBUG__: 'true',
+    __LOG_LEVEL__: JSON.stringify('error'),
+    __ENV__: JSON.stringify('development'),
+    __API_URL__: JSON.stringify('http://localhost:8080'),
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', '@apollo/client', '@mui/material'],
+  },
 });

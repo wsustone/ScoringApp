@@ -1,42 +1,30 @@
-export interface Course {
-  id: string;
-  name: string;
-  location: string;
-  teeSets: TeeSet[];
-}
-
-export interface TeeSet {
-  id: string;
-  name: string;
-  courseRating: number;
-  slopeRating: number;
-  holes: Hole[];
-}
-
-export interface ExtendedTeeSet extends TeeSet {
-  type: 'front9' | 'back9';
-}
-
-export interface CourseTees {
-  menTees: TeeSet[];
-  ladyTees: TeeSet[];
-}
-
-export interface Hole {
+export interface GolfHole {
   number: number;
   par: number;
   strokeIndex: number;
-  handicap: number;
   distance: number;
-  yardage: number;
+}
+
+export interface TeeSetting {
+  id: string;
+  name: string;
+  gender: string;
+  courseRating: number;
+  slopeRating: number;
+  holes: GolfHole[];
+}
+
+export interface GolfCourse {
+  id: string;
+  name: string;
+  location: string;
+  tees: TeeSetting[];
 }
 
 export interface HoleSetup {
-  banker: string | null;
-  dots: number;
-  doubles: { [key: string]: boolean };
-}
-
-export interface Score {
-  [key: string]: { [key: number]: number | null };
+  pin: string;
+  teeBox: string;
+  banker?: boolean;
+  dots?: number;
+  doubles?: boolean;
 }

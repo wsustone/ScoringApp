@@ -10,16 +10,22 @@ import {
   Paper,
   Alert,
   Divider,
+  Grid,
+  Card,
+  CardContent,
+  TextField,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { BankerGame } from './BankerGame';
 import { Player } from './PlayerForm';
-import { HoleSetup, Hole } from '../types';
+import { GolfHole, HoleSetup } from '../types';
 
 export type GameType = 'banker' | 'mrpar' | 'wolf';
 
 interface GameProps {
   scores: { [key: string]: { [key: number]: number | null } };
-  holes: Hole[];
+  holes: GolfHole[];
   holeSetups: { [key: number]: HoleSetup };
   onHoleSetupChange: (holeNumber: number, setup: Partial<HoleSetup>) => void;
   players: Player[];
@@ -111,6 +117,71 @@ export const Game: React.FC<GameProps> = ({
       </Box>
 
       <Divider sx={{ my: 3 }} />
+
+      <Typography variant="h5" gutterBottom>
+        Game Setup
+      </Typography>
+      <Grid container spacing={3}>
+        {holes.map((hole) => (
+          <Grid item xs={12} sm={6} md={4} key={hole.number}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Hole {hole.number}
+                </Typography>
+                <Typography color="textSecondary" gutterBottom>
+                  Par {hole.par} | SI {hole.strokeIndex}
+                </Typography>
+                
+                <TextField
+                  label="Pin Position"
+                  value={holeSetups[hole.number]?.pin || ''}
+                  onChange={(e) => onHoleSetupChange(hole.number, { pin: e.target.value })}
+                  fullWidth
+                  margin="normal"
+                />
+                
+                <TextField
+                  label="Tee Box"
+                  value={holeSetups[hole.number]?.teeBox || ''}
+                  onChange={(e) => onHoleSetupChange(hole.number, { teeBox: e.target.value })}
+                  fullWidth
+                  margin="normal"
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={holeSetups[hole.number]?.banker || false}
+                      onChange={(e) => onHoleSetupChange(hole.number, { banker: e.target.checked })}
+                    />
+                  }
+                  label="Banker"
+                />
+
+                <TextField
+                  label="Dots"
+                  type="number"
+                  value={holeSetups[hole.number]?.dots || ''}
+                  onChange={(e) => onHoleSetupChange(hole.number, { dots: parseInt(e.target.value) || 0 })}
+                  fullWidth
+                  margin="normal"
+                />
+
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={holeSetups[hole.number]?.doubles || false}
+                      onChange={(e) => onHoleSetupChange(hole.number, { doubles: e.target.checked })}
+                    />
+                  }
+                  label="Doubles"
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
       {selectedGame === 'banker' && !getPlayerWarning(selectedGame) && (
         <BankerGame

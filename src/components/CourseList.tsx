@@ -1,11 +1,16 @@
 import { useQuery } from '@apollo/client';
-import { GET_COURSES } from '../graphql/queries';
-import { GolfCourse } from '../graphql/types';
+import { GET_GOLF_COURSES } from '../graphql/queries';
 import { Card, CardContent, Typography, Grid, Box, CircularProgress } from '@mui/material';
 import { Link } from 'react-router-dom';
 
+interface Course {
+  id: string;
+  name: string;
+  location: string;
+}
+
 export const CourseList = () => {
-  const { loading, error, data } = useQuery<{ courses: GolfCourse[] }>(GET_COURSES);
+  const { loading, error, data } = useQuery(GET_GOLF_COURSES);
 
   if (loading) return <CircularProgress />;
   if (error) return <Typography color="error">Error: {error.message}</Typography>;
@@ -16,8 +21,8 @@ export const CourseList = () => {
         Golf Courses
       </Typography>
       <Grid container spacing={3}>
-        {data?.courses.map((course) => (
-          <Grid item xs={12} sm={6} md={4} key={course.name}>
+        {data?.golfCourses.map((course: Course) => (
+          <Grid item xs={12} sm={6} md={4} key={course.id}>
             <Card component={Link} to={`/course/${encodeURIComponent(course.name)}`} sx={{ textDecoration: 'none' }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>
@@ -25,12 +30,6 @@ export const CourseList = () => {
                 </Typography>
                 <Typography color="textSecondary">
                   Location: {course.location}
-                </Typography>
-                <Typography variant="body2">
-                  Men's Tees: {course.menTees.map(tee => tee.name).join(', ')}
-                </Typography>
-                <Typography variant="body2">
-                  Lady's Tees: {course.ladyTees.map(tee => tee.name).join(', ')}
                 </Typography>
               </CardContent>
             </Card>
