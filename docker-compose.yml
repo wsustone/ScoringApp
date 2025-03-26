@@ -5,11 +5,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        - BUILD_TYPE=${BUILD_TYPE:-build:local}  # Default to local build if not specified
     ports:
-      - "80:80"
+      - "6173:80"
     environment:
       - NODE_ENV=production
-      - VITE_API_URL=http://scoring-engine.327165573193.us-west-2.amazonaws.com:8080
       - VITE_API_URL=http://localhost:8080
     networks:
       - scoring-network

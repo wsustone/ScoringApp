@@ -19,7 +19,7 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 
 const httpLink = createHttpLink({
   uri: API_URL,
-  credentials: 'omit',
+  credentials: 'include',
   headers: {
     'Content-Type': 'application/json',
   }
@@ -30,10 +30,12 @@ const apolloClient = new ApolloClient({
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {
-      fetchPolicy: 'no-cache',
+      fetchPolicy: 'network-only',
+      errorPolicy: 'all',
     },
     query: {
-      fetchPolicy: 'no-cache',
+      fetchPolicy: 'network-only',
+      errorPolicy: 'all',
     },
   },
 });

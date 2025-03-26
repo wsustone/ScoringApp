@@ -4,6 +4,7 @@ import { ApolloProvider } from '@apollo/client';
 import { apolloClient } from './graphql/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App';
+import { GamePage } from './pages/GamePage';
 import { CourseList } from './components/CourseList';
 import { CourseDetail } from './components/CourseDetail';
 import './index.css';
@@ -15,6 +16,10 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
+        element: <GamePage />,
+      },
+      {
+        path: 'courses',
         element: <CourseList />,
       },
       {

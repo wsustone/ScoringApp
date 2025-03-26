@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   // Load environment variables based on mode
   const env = loadEnv(mode, process.cwd(), '');
-  const apiUrl = new URL(env.VITE_API_URL || 'http://localhost:8080');
+  const apiUrl = env.VITE_API_URL || 'http://localhost:8080';
 
   return {
     plugins: [react()],
@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       proxy: {
         '/query': {
-          target: env.VITE_API_URL,
+          target: apiUrl,
           changeOrigin: true,
           secure: false,
           ws: true,
@@ -28,17 +28,6 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       assetsDir: 'assets',
       manifest: true,
-      rollupOptions: {
-        output: {
-          format: 'es',
-          entryFileNames: 'assets/[name]-[hash].js',
-          chunkFileNames: 'assets/[name]-[hash].js',
-          assetFileNames: 'assets/[name]-[hash].[ext]',
-        },
-      },
-    },
-    define: {
-      __API_URL__: JSON.stringify(env.VITE_API_URL),
     },
   };
 });

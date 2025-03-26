@@ -1,115 +1,97 @@
 import React from 'react';
-import {
-  Box,
-  FormControl,
-  Select,
-  MenuItem,
-  Typography,
-  Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Checkbox,
-  TextField,
-  SelectChangeEvent,
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Grid, 
+  FormControl, 
+  Select, 
+  MenuItem, 
+  TextField, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
+  Checkbox
 } from '@mui/material';
-import { styled } from '@mui/material/styles';
 import { Player } from './PlayerForm';
-import { Hole, HoleSetup } from '../types';
+import { useQuery } from '@apollo/client';
+import { GET_GOLF_COURSE } from '../graphql/queries';
 
 interface BankerGameProps {
+  players: Player[];
+  courseId: string;
   scores: { [key: string]: { [key: number]: number | null } };
-  holes: Hole[];
+  holes: { number: number; par: number }[];
   holeSetups: { [key: number]: HoleSetup };
   onHoleSetupChange: (holeNumber: number, setup: Partial<HoleSetup>) => void;
-  players: Player[];
 }
 
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  padding: theme.spacing(1),
-  '&.header': {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-  },
-}));
+interface HoleSetup {
+  banker: string | null;
+  dots: number;
+  doubles: { [playerId: string]: boolean };
+}
 
-export const BankerGame: React.FC<BankerGameProps> = ({
+export const BankerGame: React.FC<BankerGameProps> = ({ 
+  players, 
+  courseId,
   scores,
   holes,
   holeSetups,
-  onHoleSetupChange,
-  players,
+  onHoleSetupChange
 }) => {
-  const handleBankerChange = (holeNumber: number, event: SelectChangeEvent<string>) => {
-    const value = event.target.value;
-    onHoleSetupChange(holeNumber, {
-      banker: value === '' ? null : value,
-    });
-  };
+  const { loading, error, data } = useQuery(GET_GOLF_COURSE, {
+    variables: { id: courseId }
+  });
 
-  const handleDotsChange = (holeNumber: number, value: string) => {
-    onHoleSetupChange(holeNumber, {
-      dots: parseInt(value, 10) || 1,
-    });
-  };
+  if (loading) return <Typography>Loading course data...</Typography>;
+  if (error) return <Typography color="error">Error loading course: {error.message}</Typography>;
 
-  const handleDoubleChange = (holeNumber: number, playerId: string, checked: boolean) => {
-    const currentSetup = holeSetups[holeNumber] || { banker: null, dots: 1, doubles: {} };
-    onHoleSetupChange(holeNumber, {
-      doubles: {
-        ...currentSetup.doubles,
-        [playerId]: checked,
-      },
-    });
-  };
-
-  const getHolePoints = (holeNumber: number, setup: HoleSetup): string => {
-    if (!setup.banker || !scores[setup.banker]?.[holeNumber]) return '-';
-
-    const bankerScore = scores[setup.banker][holeNumber];
-    const results: string[] = [];
-
-    players.forEach(player => {
-      if (player.id === setup.banker) return;
-
-      const playerScore = scores[player.id]?.[holeNumber];
-      if (playerScore === null || bankerScore === null) return;
-
-      let points = setup.dots;
-      if (setup.banker && setup.doubles[setup.banker]) points *= 2;
-      if (setup.doubles[player.id]) points *= 2;
-
-      if (bankerScore < playerScore) {
-        results.push(`Banker wins ${points} from ${player.name}`);
-      } else if (bankerScore > playerScore) {
-        results.push(`${player.name} wins ${points}`);
-      } else {
-        results.push(`Tie with ${player.name}`);
-      }
-    });
-
-    return results.length ? results.join(', ') : '-';
-  };
-
+  const course = data.golfCourse;
+  
   return (
     <Box>
-      <Typography variant="h6" gutterBottom>
+      <Typography variant="h4" gutterBottom>
+        {course.name}
+      </Typography>
+      <Typography variant="subtitle1" gutterBottom>
+        {course.location}
+      </Typography>
+      
+      <Grid container spacing={2} sx={{ mt: 2 }}>
+        {players.map((player) => {
+          const tee = course.tees.find((t: any) => t.id === player.teeId);
+          return (
+            <Grid item xs={12} sm={6} md={3} key={player.id}>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6">{player.name}</Typography>
+                <Typography>Handicap: {player.handicap}</Typography>
+                <Typography>Tee: {tee?.name} ({tee?.gender})</Typography>
+                <Typography>Course Rating: {tee?.courseRating}</Typography>
+                <Typography>Slope Rating: {tee?.slopeRating}</Typography>
+              </Paper>
+            </Grid>
+          );
+        })}
+      </Grid>
+      
+      <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
         Banker Game Setup
       </Typography>
-
+      
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
             <TableRow>
-              <StyledTableCell className="header">Hole</StyledTableCell>
-              <StyledTableCell className="header">Par</StyledTableCell>
-              <StyledTableCell className="header">Banker</StyledTableCell>
-              <StyledTableCell className="header">Dots</StyledTableCell>
-              <StyledTableCell className="header" align="center">Doubles</StyledTableCell>
-              <StyledTableCell className="header">Results</StyledTableCell>
+              <TableCell>Hole</TableCell>
+              <TableCell>Par</TableCell>
+              <TableCell>Banker</TableCell>
+              <TableCell>Dots</TableCell>
+              <TableCell align="center">Doubles</TableCell>
+              <TableCell>Results</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -117,17 +99,16 @@ export const BankerGame: React.FC<BankerGameProps> = ({
               const setup = holeSetups[hole.number] || { banker: null, dots: 1, doubles: {} };
               return (
                 <TableRow key={hole.number}>
-                  <StyledTableCell>{hole.number}</StyledTableCell>
-                  <StyledTableCell>{hole.par}</StyledTableCell>
-                  <StyledTableCell>
+                  <TableCell>{hole.number}</TableCell>
+                  <TableCell>{hole.par}</TableCell>
+                  <TableCell>
                     <FormControl fullWidth size="small">
                       <Select
                         value={setup.banker || ''}
-                        onChange={(e) => handleBankerChange(hole.number, e)}
-                        displayEmpty
+                        onChange={(e) => onHoleSetupChange(hole.number, { banker: e.target.value || null })}
                       >
                         <MenuItem value="">
-                          <em>Select Banker</em>
+                          <em>None</em>
                         </MenuItem>
                         {players.map((player) => (
                           <MenuItem key={player.id} value={player.id}>
@@ -136,37 +117,63 @@ export const BankerGame: React.FC<BankerGameProps> = ({
                         ))}
                       </Select>
                     </FormControl>
-                  </StyledTableCell>
-                  <StyledTableCell>
+                  </TableCell>
+                  <TableCell>
                     <TextField
                       type="number"
                       size="small"
                       value={setup.dots}
-                      onChange={(e) => handleDotsChange(hole.number, e.target.value)}
+                      onChange={(e) => onHoleSetupChange(hole.number, { dots: parseInt(e.target.value) || 1 })}
                       inputProps={{ min: 1, max: 5 }}
                       sx={{ width: 80 }}
                     />
-                  </StyledTableCell>
-                  <StyledTableCell>
+                  </TableCell>
+                  <TableCell>
                     <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
                       {players.map((player) => (
                         <Box key={player.id} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           <Checkbox
-                            size="small"
-                            checked={setup.doubles[player.id] || false}
-                            onChange={(e) => handleDoubleChange(hole.number, player.id, e.target.checked)}
+                            checked={!!setup.doubles[player.id]}
+                            onChange={(e) => {
+                              const newDoubles = { ...setup.doubles };
+                              if (e.target.checked) {
+                                newDoubles[player.id] = true;
+                              } else {
+                                delete newDoubles[player.id];
+                              }
+                              onHoleSetupChange(hole.number, { doubles: newDoubles });
+                            }}
                             disabled={setup.banker === player.id}
                           />
-                          <Typography variant="caption">
-                            {player.name}
-                          </Typography>
+                          <Typography variant="caption">{player.name}</Typography>
                         </Box>
                       ))}
                     </Box>
-                  </StyledTableCell>
-                  <StyledTableCell>
-                    {getHolePoints(hole.number, setup)}
-                  </StyledTableCell>
+                  </TableCell>
+                  <TableCell>
+                    {setup.banker && scores[setup.banker] && scores[setup.banker][hole.number] !== null ? (
+                      <Typography>
+                        {Object.entries(scores)
+                          .filter(([playerId]) => playerId !== setup.banker)
+                          .map(([playerId, playerScores]) => {
+                            if (playerScores[hole.number] === null) return null;
+                            const diff = playerScores[hole.number]! - scores[setup.banker!][hole.number]!;
+                            let points = setup.dots;
+                            if (setup.doubles[playerId]) points *= 2;
+                            if (diff > 0) {
+                              return `${players.find(p => p.id === playerId)?.name}: +${points}`;
+                            } else if (diff < 0) {
+                              return `${players.find(p => p.id === playerId)?.name}: -${points}`;
+                            }
+                            return `${players.find(p => p.id === playerId)?.name}: 0`;
+                          })
+                          .filter(Boolean)
+                          .join(', ')}
+                      </Typography>
+                    ) : (
+                      '-'
+                    )}
+                  </TableCell>
                 </TableRow>
               );
             })}

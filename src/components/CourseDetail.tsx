@@ -10,7 +10,6 @@ import {
   TableCell, 
   TableHead, 
   TableRow, 
-  Paper, 
   Container, 
   Tabs, 
   Tab 
@@ -19,7 +18,8 @@ import { useState } from 'react';
 import { Scorecard } from './Scorecard';
 import { Game } from './Game';
 import { PlayerForm, Player } from './PlayerForm';
-import { GolfCourse, HoleSetup } from '../types';
+import { TeeSet, Hole } from '../graphql/types';
+import { HoleSetup } from '../types/game';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -50,31 +50,22 @@ function TabPanel(props: TabPanelProps) {
 export const CourseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [selectedTab, setSelectedTab] = useState(0);
-  const [players, setPlayers] = useState<Player[]>([
-    { id: '1', name: '', handicap: 0 }
-  ]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>({});
   const [holeSetups, setHoleSetups] = useState<{ [key: number]: HoleSetup }>({});
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 
-  const { loading, error, data } = useQuery<{ golfCourse: GolfCourse }>(GET_GOLF_COURSE, {
+  const { loading, error, data } = useQuery(GET_GOLF_COURSE, {
     variables: { id },
     skip: !id,
   });
 
-  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);
   };
 
   const handlePlayerChange = (updatedPlayers: Player[]) => {
     setPlayers(updatedPlayers);
-    // Initialize scores for new players
-    const newScores = { ...scores };
-    updatedPlayers.forEach(player => {
-      if (!newScores[player.id]) {
-        newScores[player.id] = {};
-      }
-    });
-    setScores(newScores);
   };
 
   const handleScoreChange = (playerId: string, holeNumber: number, score: number | null) => {
@@ -90,11 +81,12 @@ export const CourseDetail = () => {
   const handleHoleSetupChange = (holeNumber: number, setup: Partial<HoleSetup>) => {
     setHoleSetups(prev => ({
       ...prev,
-      [holeNumber]: {
-        ...prev[holeNumber],
-        ...setup,
-      },
+      [holeNumber]: { ...prev[holeNumber], ...setup },
     }));
+  };
+
+  const handleCourseChange = (courseId: string) => {
+    setSelectedCourseId(courseId);
   };
 
   if (loading) return <CircularProgress />;
@@ -102,6 +94,7 @@ export const CourseDetail = () => {
   if (!data?.golfCourse) return <Typography>Course not found</Typography>;
 
   const course = data.golfCourse;
+  const holes = [...course.menTees[0].front9Holes, ...course.menTees[0].back9Holes];
 
   return (
     <Container maxWidth="lg">
@@ -115,12 +108,17 @@ export const CourseDetail = () => {
         </Box>
 
         <TabPanel value={selectedTab} index={0}>
-          <PlayerForm players={players} onPlayersChange={handlePlayerChange} />
+          <PlayerForm 
+            players={players} 
+            onPlayersChange={handlePlayerChange}
+            selectedCourseId={selectedCourseId}
+            onCourseChange={handleCourseChange}
+          />
         </TabPanel>
 
         <TabPanel value={selectedTab} index={1}>
           <Scorecard
-            holes={course.tees[0].holes}
+            holes={holes}
             players={players}
             scores={scores}
             onScoreChange={handleScoreChange}
@@ -129,11 +127,22 @@ export const CourseDetail = () => {
 
         <TabPanel value={selectedTab} index={2}>
           <Game
-            holes={course.tees[0].holes}
+            holes={holes}
             players={players}
             scores={scores}
             holeSetups={holeSetups}
             onHoleSetupChange={handleHoleSetupChange}
+            onScoreChange={(playerId: string, hole: number, score: number | null) => {
+              setScores(prev => ({
+                ...prev,
+                [playerId]: {
+                  ...prev[playerId],
+                  [hole]: score
+                }
+              }));
+            }}
+            selectedCourseId={selectedCourseId}
+            setSelectedCourseId={setSelectedCourseId}
           />
         </TabPanel>
 
@@ -145,37 +154,39 @@ export const CourseDetail = () => {
             Location: {course.location}
           </Typography>
 
-          {course.tees.map((tee) => (
-            <Box key={tee.id} sx={{ mt: 4 }}>
+          {course.menTees.map((tee: TeeSet) => (
+            <Box key={tee.name} sx={{ mt: 4 }}>
               <Typography variant="h5" gutterBottom>
-                {tee.name} ({tee.gender})
+                {tee.name} (Men)
               </Typography>
               <Typography>
                 Course Rating: {tee.courseRating} | Slope Rating: {tee.slopeRating}
               </Typography>
-
-              <Paper sx={{ mt: 2, overflowX: 'auto' }}>
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Front 9
+                </Typography>
                 <Table>
                   <TableHead>
                     <TableRow>
                       <TableCell>Hole</TableCell>
                       <TableCell>Par</TableCell>
-                      <TableCell>Stroke Index</TableCell>
                       <TableCell>Distance</TableCell>
+                      <TableCell>SI</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {tee.holes.map((hole) => (
+                    {tee.front9Holes.map((hole: Hole) => (
                       <TableRow key={hole.number}>
                         <TableCell>{hole.number}</TableCell>
                         <TableCell>{hole.par}</TableCell>
-                        <TableCell>{hole.strokeIndex}</TableCell>
                         <TableCell>{hole.distance}</TableCell>
+                        <TableCell>{hole.strokeIndex}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </Paper>
+              </Box>
             </Box>
           ))}
         </Box>
