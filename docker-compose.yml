@@ -9,7 +9,8 @@ services:
       - "80:80"
     environment:
       - NODE_ENV=production
-      - VITE_API_URL=http://localhost:8080
+      - VITE_API_URL=http://scoring-engine.327165573193.us-west-2.amazonaws.com:8080
+      - VITE_LOCAL_API_URL=http://localhost:8080
     networks:
       - scoring-network
 

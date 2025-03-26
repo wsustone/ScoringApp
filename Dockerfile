@@ -3,6 +3,7 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
+ARG BUILD_TYPE="build:local"
 # Copy package files
 COPY package.json package-lock.json ./
 
@@ -13,7 +14,7 @@ RUN npm ci
 COPY . .
 
 # Build the app
-RUN npm run build
+RUN npm run ${BUILD_TYPE}
 
 # Production stage
 FROM nginx:alpine
