@@ -10,8 +10,6 @@ interface GameProps {
   holeSetups: { [key: number]: HoleSetup };
   onHoleSetupChange: (holeNumber: number, setup: Partial<HoleSetup>) => void;
   onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
-  selectedCourseId: string;
-  setSelectedCourseId: (courseId: string) => void;
 }
 
 const emptyHoleSetup: HoleSetup = {
@@ -26,9 +24,7 @@ export const Game = ({
   scores,
   holeSetups,
   onHoleSetupChange,
-  onScoreChange,
-  selectedCourseId,
-  setSelectedCourseId
+  onScoreChange
 }: GameProps) => {
   const [currentHole, setCurrentHole] = useState(1);
   const [gameType, setGameType] = useState<GameType>('banker');
@@ -69,30 +65,34 @@ export const Game = ({
       const setup = holeSetups[hole.number];
       if (!setup?.banker || setup.dots === 0) return;
 
-      const bankerScore = scores[setup.banker]?.[hole.number];
+      const bankerScore = scores[setup.banker]?.[hole.number] || 0;
       if (bankerScore === null) return;
 
       // Compare banker's score against each other player
       players.forEach(player => {
         if (player.id === setup.banker) return; // Skip banker
 
-        const playerScore = scores[player.id]?.[hole.number];
+        const playerScore = scores[player.id]?.[hole.number] || 0;
         if (playerScore === null) return;
 
         // Calculate if either player has doubles
-        const bankerDouble = setup.doubles[setup.banker] || false;
-        const playerDouble = setup.doubles[player.id] || false;
+        const bankerDouble = setup.banker && setup.doubles && setup.doubles[setup.banker] || false;
+        const playerDouble = setup.doubles && setup.doubles[player.id] || false;
         const multiplier = (bankerDouble || playerDouble) ? 2 : 1;
 
         // Compare net scores
         if (bankerScore < playerScore) {
           // Banker wins against this player
-          totals[setup.banker] += setup.dots * multiplier;
-          totals[player.id] -= setup.dots * multiplier;
+          if (setup.banker) {
+            totals[setup.banker] = (totals[setup.banker] || 0) + (setup.dots || 0) * multiplier;
+          }
+          totals[player.id] = (totals[player.id] || 0) - (setup.dots || 0) * multiplier;
         } else if (bankerScore > playerScore) {
           // Player wins against banker
-          totals[setup.banker] -= setup.dots * multiplier;
-          totals[player.id] += setup.dots * multiplier;
+          if (setup.banker) {
+            totals[setup.banker] = (totals[setup.banker] || 0) - (setup.dots || 0) * multiplier;
+          }
+          totals[player.id] = (totals[player.id] || 0) + (setup.dots || 0) * multiplier;
         }
         // If scores are equal, no points are exchanged
       });
@@ -273,7 +273,7 @@ export const Game = ({
                           Hole {hole.number}
                         </Typography>
                         <Typography variant="body2" color="primary">
-                          {holeSetup.dots} dots
+                          {(holeSetup.dots || 0)} dots
                         </Typography>
                         {banker && (
                           <Typography variant="caption" display="block">

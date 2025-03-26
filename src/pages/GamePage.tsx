@@ -97,8 +97,6 @@ export const GamePage = () => {
           holeSetups={holeSetups}
           onHoleSetupChange={handleHoleSetupChange}
           onScoreChange={handleScoreChange}
-          selectedCourseId={selectedCourseId}
-          setSelectedCourseId={setSelectedCourseId}
         />
       )}
     </Box>

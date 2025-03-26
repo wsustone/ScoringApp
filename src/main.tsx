@@ -20,7 +20,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'courses',
-        element: <CourseList />,
+        element: <CourseList onCourseSelect={() => {}} />,
       },
       {
         path: 'course/:id',

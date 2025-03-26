@@ -43,31 +43,61 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
         <TableHead>
           <TableRow>
             <TableCell>Player</TableCell>
-            {courseHoles.map((hole: GolfHole) => (
+            {[...courseHoles.slice(0, 9).map((hole: GolfHole) => (
               <TableCell key={hole.number} align="center">
                 {hole.number}
               </TableCell>
-            ))}
+            )), 
+            <TableCell key="in" align="center">In</TableCell>,
+            ...courseHoles.slice(9).map((hole: GolfHole) => (
+              <TableCell key={hole.number} align="center">
+                {hole.number}
+              </TableCell>
+            )),
+            <TableCell key="out" align="center">Out</TableCell>]}
             <TableCell align="center">Total</TableCell>
           </TableRow>
           <TableRow>
             <TableCell>Par</TableCell>
-            {courseHoles.map((hole: GolfHole) => (
-              <TableCell key={hole.number} align="center">
-                {hole.par}
-              </TableCell>
-            ))}
+            {(() => {
+              const frontNine = courseHoles.slice(0, 9);
+              const backNine = courseHoles.slice(9);
+              const frontNinePar = frontNine.reduce((sum, h) => sum + h.par, 0);
+              const backNinePar = backNine.reduce((sum, h) => sum + h.par, 0);
+              
+              return [
+                ...frontNine.map((hole: GolfHole) => (
+                  <TableCell key={hole.number} align="center">
+                    {hole.par}
+                  </TableCell>
+                )),
+                <TableCell key="in" align="center">{frontNinePar}</TableCell>,
+                ...backNine.map((hole: GolfHole) => (
+                  <TableCell key={hole.number} align="center">
+                    {hole.par}
+                  </TableCell>
+                )),
+                <TableCell key="out" align="center">{backNinePar}</TableCell>
+              ];
+            })()}
             <TableCell align="center">
               {courseHoles.reduce((sum, hole) => sum + hole.par, 0)}
             </TableCell>
           </TableRow>
           <TableRow>
             <TableCell>SI</TableCell>
-            {courseHoles.map((hole: GolfHole) => (
+            {[...courseHoles.slice(0, 9).map((hole: GolfHole) => (
               <TableCell key={hole.number} align="center">
                 {hole.strokeIndex}
               </TableCell>
-            ))}
+            )),
+            <TableCell key="in" />,
+            ...courseHoles.slice(9).map((hole: GolfHole) => (
+              <TableCell key={hole.number} align="center">
+                {hole.strokeIndex}
+              </TableCell>
+            )),
+            <TableCell key="out" />]}
             <TableCell />
           </TableRow>
         </TableHead>
@@ -75,7 +105,38 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
           {players.map(player => {
             const playerScores = scores[player.id] || {};
             const tee = course?.tees?.find((t: GolfTee) => t.id === player.teeId);
-            const total = Object.values(playerScores).reduce((sum, score) => (sum || 0) + (score || 0), 0);
+            const total = Object.values(playerScores).reduce((sum, score) => (sum || 0) + (score || 0), 0) || 0;
+            
+            // Calculate net score by summing all handicap-adjusted scores
+            const netScore = courseHoles.reduce((sum, hole) => {
+              const score = playerScores[hole.number];
+              if (score === undefined || score === null) return sum;
+              const strokesGiven = Math.floor(player.handicap / 18) + (player.handicap % 18 >= hole.strokeIndex ? 1 : 0);
+              return sum + (score - strokesGiven);
+            }, 0);
+
+            const frontNineTotal = Object.entries(playerScores)
+              .filter(([hole]) => parseInt(hole) <= 9)
+              .reduce((sum, [_, score]) => sum + (score || 0), 0);
+            const backNineTotal = Object.entries(playerScores)
+              .filter(([hole]) => parseInt(hole) > 9 && parseInt(hole) <= 18)
+              .reduce((sum, [_, score]) => sum + (score || 0), 0);
+
+            // Calculate handicap adjustments for front nine
+            const frontNineAdjusted = courseHoles.slice(0, 9).reduce((sum, hole) => {
+              const score = playerScores[hole.number];
+              if (score === undefined || score === null) return sum;
+              const strokesGiven = Math.floor(player.handicap / 18) + (player.handicap % 18 >= hole.strokeIndex ? 1 : 0);
+              return sum + (score - strokesGiven);
+            }, 0);
+
+            // Calculate handicap adjustments for back nine
+            const backNineAdjusted = courseHoles.slice(9).reduce((sum, hole) => {
+              const score = playerScores[hole.number];
+              if (score === undefined || score === null) return sum;
+              const strokesGiven = Math.floor(player.handicap / 18) + (player.handicap % 18 >= hole.strokeIndex ? 1 : 0);
+              return sum + (score - strokesGiven);
+            }, 0);
             
             return (
               <TableRow key={player.id}>
@@ -90,43 +151,141 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                     </Box>
                   </Box>
                 </TableCell>
-                {courseHoles.map((hole: GolfHole) => {
-                  const holeDistance = tee?.holes?.find((h: GolfHole) => h.number === hole.number)?.distance;
+                {[...courseHoles.slice(0, 9).map((hole: GolfHole) => {
+                  const score = playerScores[hole.number];
+                  // Calculate strokes given based on handicap and SI
+                  const strokesGiven = Math.floor(player.handicap / 18) + (player.handicap % 18 >= hole.strokeIndex ? 1 : 0);
+                  const adjustedScore = score !== undefined && score !== null 
+                    ? score - strokesGiven
+                    : null;
+
                   return (
                     <TableCell key={`${hole.number}-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
-                      <input
-                        type="number"
-                        min="1"
-                        max="20"
-                        value={playerScores[hole.number] || ''}
-                        onChange={(e) => {
-                          const value = e.target.value ? parseInt(e.target.value, 10) : null;
-                          if (value !== null && (value < 1 || value > 20)) return;
-                          onScoreChange(player.id, hole.number, value);
-                        }}
-                        style={{
-                          width: '40px',
-                          textAlign: 'center',
-                          border: '1px solid #ddd',
-                          borderRadius: '4px',
-                          padding: '4px',
-                          color: playerScores[hole.number] && hole.par
-                            ? playerScores[hole.number]! < hole.par 
-                              ? '#ff0000' 
-                              : playerScores[hole.number] === hole.par 
-                                ? '#0000ff'
-                                : '#000000'
-                            : '#000000'
-                        }}
-                      />
-                      {holeDistance && (
-                        <div style={{ fontSize: '0.7em', color: 'grey' }}>{holeDistance}y</div>
-                      )}
+                      <Box sx={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={score || ''}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value, 10) : null;
+                            if (value !== null && (value < 1 || value > 20)) return;
+                            onScoreChange(player.id, hole.number, value);
+                          }}
+                          style={{
+                            width: '40px',
+                            textAlign: 'center',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            padding: '4px',
+                            color: score && hole.par
+                              ? score < hole.par 
+                                ? '#ff0000' 
+                                : score === hole.par 
+                                  ? '#0000ff'
+                                  : '#000000'
+                              : '#000000'
+                          }}
+                        />
+                        {strokesGiven > 0 && (
+                          <Box sx={{ 
+                            position: 'absolute',
+                            top: -8,
+                            right: 0,
+                            color: '#FFD700',
+                            fontSize: '0.8em'
+                          }}>
+                            {'*'.repeat(strokesGiven)}
+                          </Box>
+                        )}
+                        {adjustedScore !== null && (
+                          <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                            {adjustedScore}
+                          </div>
+                        )}
+                      </Box>
                     </TableCell>
                   );
-                })}
-                <TableCell align="center" sx={{ fontWeight: 'bold' }}>
-                  {total}
+                }),
+                <TableCell key={`in-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
+                  <Typography variant="body1">{frontNineTotal || ''}</Typography>
+                  {frontNineTotal > 0 && (
+                    <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                      {frontNineAdjusted}
+                    </div>
+                  )}
+                </TableCell>,
+                ...courseHoles.slice(9).map((hole: GolfHole) => {
+                  const score = playerScores[hole.number];
+                  // Calculate strokes given based on handicap and SI
+                  const strokesGiven = Math.floor(player.handicap / 18) + (player.handicap % 18 >= hole.strokeIndex ? 1 : 0);
+                  const adjustedScore = score !== undefined && score !== null 
+                    ? score - strokesGiven
+                    : null;
+
+                  return (
+                    <TableCell key={`${hole.number}-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
+                      <Box sx={{ position: 'relative' }}>
+                        <input
+                          type="number"
+                          min="1"
+                          max="20"
+                          value={score || ''}
+                          onChange={(e) => {
+                            const value = e.target.value ? parseInt(e.target.value, 10) : null;
+                            if (value !== null && (value < 1 || value > 20)) return;
+                            onScoreChange(player.id, hole.number, value);
+                          }}
+                          style={{
+                            width: '40px',
+                            textAlign: 'center',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            padding: '4px',
+                            color: score && hole.par
+                              ? score < hole.par 
+                                ? '#ff0000' 
+                                : score === hole.par 
+                                  ? '#0000ff'
+                                  : '#000000'
+                              : '#000000'
+                          }}
+                        />
+                        {strokesGiven > 0 && (
+                          <Box sx={{ 
+                            position: 'absolute',
+                            top: -8,
+                            right: 0,
+                            color: '#FFD700',
+                            fontSize: '0.8em'
+                          }}>
+                            {'*'.repeat(strokesGiven)}
+                          </Box>
+                        )}
+                        {adjustedScore !== null && (
+                          <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                            {adjustedScore}
+                          </div>
+                        )}
+                      </Box>
+                    </TableCell>
+                  );
+                }),
+                <TableCell key={`out-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
+                  <Typography variant="body1">{backNineTotal || ''}</Typography>
+                  {backNineTotal > 0 && (
+                    <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                      {backNineAdjusted}
+                    </div>
+                  )}
+                </TableCell>]}
+                <TableCell align="center" sx={{ minWidth: '60px' }}>
+                  <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{total || ''}</Typography>
+                  {total > 0 && (
+                    <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                      {netScore}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             );
