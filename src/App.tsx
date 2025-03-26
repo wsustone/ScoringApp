@@ -1,6 +1,6 @@
 import { ThemeProvider, CssBaseline, AppBar, Toolbar, Typography } from '@mui/material';
 import { createTheme } from '@mui/material/styles';
-import { CourseDetail } from './components/CourseDetail';
+import { Link, Outlet } from 'react-router-dom';
 
 // Create theme
 const theme = createTheme({
@@ -21,12 +21,12 @@ function App() {
       <CssBaseline />
       <AppBar position="static">
         <Toolbar>
-          <Typography variant="h6">
+          <Typography variant="h6" component={Link} to="/" style={{ color: 'white', textDecoration: 'none' }}>
             Golf Scoring App
           </Typography>
         </Toolbar>
       </AppBar>
-      <CourseDetail />
+      <Outlet />
     </ThemeProvider>
   );
 }

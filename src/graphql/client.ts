@@ -1,7 +1,8 @@
 import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/client';
 import { onError } from '@apollo/client/link/error';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// Use relative URL since we're proxying through Vite
+const API_URL = '/query';
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors)
@@ -17,8 +18,11 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 });
 
 const httpLink = createHttpLink({
-  uri: `${API_URL}/query`,
-  credentials: 'same-origin',
+  uri: API_URL,
+  credentials: 'omit',
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 const apolloClient = new ApolloClient({
@@ -26,10 +30,10 @@ const apolloClient = new ApolloClient({
   cache: new InMemoryCache(),
   defaultOptions: {
     watchQuery: {
-      fetchPolicy: 'network-only',
+      fetchPolicy: 'no-cache',
     },
     query: {
-      fetchPolicy: 'network-only',
+      fetchPolicy: 'no-cache',
     },
   },
 });
