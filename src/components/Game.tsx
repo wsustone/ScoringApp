@@ -16,7 +16,6 @@ import type { GameType, GolfHole } from '../types/game';
 
 interface GameProps {
   holes: GolfHole[];
-  courseId: string;
   players: Player[];
   scores: { [key: string]: { [key: number]: number | null } };
   currentHole: number;
@@ -28,7 +27,6 @@ interface GameProps {
 
 export const Game: React.FC<GameProps> = ({
   holes,
-  courseId,
   players,
   scores,
   currentHole,
@@ -69,7 +67,6 @@ export const Game: React.FC<GameProps> = ({
           {/* Game Type Specific Component */}
           {gameType === 'banker' && (
             <BankerGame
-              courseId={courseId}
               players={players}
               scores={scores}
               holes={holes}

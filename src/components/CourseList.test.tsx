@@ -3,7 +3,6 @@ import { render, screen } from '../test/utils';
 import { CourseList } from './CourseList';
 import { MockedProvider } from '@apollo/client/testing';
 import { GET_GOLF_COURSES } from '../graphql/queries';
-import { MemoryRouter } from 'react-router-dom';
 
 const mocks = [
   {
@@ -24,9 +23,9 @@ const mocks = [
 describe('CourseList', () => {
   it('renders without crashing', () => {
     render(
-      <MemoryRouter>
+      <MockedProvider mocks={mocks} addTypename={false}>
         <CourseList onCourseSelect={() => {}} />
-      </MemoryRouter>
+      </MockedProvider>
     );
   });
 
@@ -36,7 +35,7 @@ describe('CourseList', () => {
         <CourseList onCourseSelect={() => {}} />
       </MockedProvider>
     );
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('renders courses when data is loaded', async () => {
