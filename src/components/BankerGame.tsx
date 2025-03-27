@@ -72,12 +72,15 @@ export const calculatePoints = (
 
   // Check for birdies/eagles if enabled
   if (doubleBirdieBets) {
+    let multiplier = 1;
     // Player or banker birdie/eagle multipliers only apply one of these options since score cant be the same here
     if (playerScore === holePar - 1 || bankerScore === holePar - 1) { // Birdie
-      dots *= 2;
-    } else if (playerScore === holePar - 2 ||bankerScore === holePar - 2) { // Eagle
-      dots *= 4;
+      multiplier = 2;
     }
+    if (playerScore === holePar - 2 || bankerScore === holePar - 2) { // Eagle
+      multiplier = 4;
+    }
+    dots *= multiplier; // only apply the greatest multiplier
   }
 
   if (isBanker) {
@@ -321,20 +324,34 @@ export const BankerGame: React.FC<BankerGameProps> = ({
                   </Grid>
                   <Grid item xs={12}>
                     <Typography variant="subtitle2" gutterBottom>Scores</Typography>
-                    <Grid container spacing={2}>
-                      {players.map(player => (
-                        <Grid item xs={12} sm={6} key={player.id}>
-                          <TextField
-                            fullWidth
-                            size="small"
-                            label={player.name || `Player ${player.id}`}
-                            type="number"
-                            value={scores[player.id]?.[currentHole] ?? ''}
-                            onChange={(e) => onScoreChange(player.id, currentHole, e.target.value ? parseInt(e.target.value, 10) : null)}
-                          />
-                        </Grid>
-                      ))}
-                    </Grid>
+                    <table role="table" aria-label="Player Scores">
+                      <thead>
+                        <tr>
+                          <th>Player</th>
+                          <th>Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {players.map(player => (
+                          <tr key={player.id}>
+                            <td>{player.name}</td>
+                            <td>
+                              <TextField
+                                fullWidth
+                                size="small"
+                                type="number"
+                                inputProps={{
+                                  'aria-label': `Score for ${player.name}`,
+                                  role: 'spinbutton'
+                                }}
+                                value={scores[player.id]?.[currentHole] ?? ''}
+                                onChange={(e) => onScoreChange(player.id, currentHole, e.target.value ? parseInt(e.target.value, 10) : null)}
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </Grid>
                 </Grid>
               </Grid>
@@ -409,94 +426,29 @@ export const BankerGame: React.FC<BankerGameProps> = ({
               </IconButton>
             </Box>
             <Collapse in={dotsHistoryOpen}>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                {holes.map((hole) => {
-                  const setup = holeSetups[hole.number] || { ...emptyHoleSetup };
-                  if (!setup.banker) return null;
+              <table role="table" aria-label="Dots History">
+                <thead>
+                  <tr>
+                    <th>Hole</th>
+                    <th>Player</th>
+                    <th>Dots</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {holes.map((hole) => {
+                    const setup = holeSetups[hole.number] || { ...emptyHoleSetup };
+                    if (!setup.banker) return null;
 
-                  const results = Object.entries(scores)
-                    .filter(([_, playerScores]) => playerScores[hole.number] !== null)
-                    .map(([playerId, playerScores]) => {
-                      const player = players.find(p => p.id === playerId);
-                      if (!player || !setup.banker) return null;
-                      
-                      const playerScore = playerScores[hole.number]!;
-                      const bankerScore = scores[setup.banker][hole.number]!;
-                      const { points, isPositive } = calculatePoints(
-                        playerScore,
-                        bankerScore,
-                        hole.par,
-                        setup.dots,
-                        Boolean(setup.doubles?.[playerId]),
-                        Boolean(setup.doubles?.[setup.banker]),
-                        doubleBirdieBets,
-                        playerId === setup.banker
-                      );
-                      
-                      return {
-                        playerId,
-                        playerName: player.name,
-                        points,
-                        isPositive
-                      };
-                    })
-                    .filter(Boolean);
-
-                  if (results.length === 0) return null;
-
-                  return (
-                    <Paper 
-                      key={hole.number} 
-                      elevation={2}
-                      sx={{ 
-                        p: 1.5,
-                        minWidth: 150,
-                        flex: '0 0 auto'
-                      }}
-                    >
-                      <Typography variant="subtitle2" gutterBottom>
-                        {hole.number}/{setup.dots}
-                      </Typography>
-                      <Stack spacing={0.5}>
-                        {players.map(player => {
-                          const result = results.find(r => r?.playerId === player.id);
-                          if (!result) return null;
-                          
-                          return (
-                            <Box 
-                              key={player.id}
-                              sx={{ 
-                                display: 'flex', 
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <Typography 
-                                variant="body2"
-                                sx={{ 
-                                  fontWeight: player.id === setup.banker ? 700 : 400,
-                                  fontSize: '0.875rem'
-                                }}
-                              >
-                                {player.name}
-                              </Typography>
-                              <Typography 
-                                variant="body2"
-                                sx={{ 
-                                  color: result.isPositive ? 'success.main' : 'error.main',
-                                  fontSize: '0.875rem'
-                                }}
-                              >
-                                {result.isPositive ? '+' : '-'}{result.points}
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                      </Stack>
-                    </Paper>
-                  );
-                })}
-              </Box>
+                    return (
+                      <tr key={hole.number}>
+                        <td>Hole {hole.number}</td>
+                        <td>{setup.banker}</td>
+                        <td>{dotsHistory[setup.banker] || 0}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </Collapse>
           </Paper>
         </Grid>

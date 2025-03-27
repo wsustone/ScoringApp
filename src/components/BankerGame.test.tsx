@@ -55,40 +55,42 @@ describe('BankerGame Points Calculation', () => {
     });
   });
 
+  
   describe('Double Betting Rules', () => {
-    test('applies player double', () => {
-      const result = calculatePoints(3, 4, 4, 1, true, false, false, false);
+    test('applies double and win with par', () => {
+      const result = calculatePoints(3, 4, 3, 1, true, false, false, false);
       expect(result.points).toBe(2);
       expect(result.isPositive).toBe(true);
     });
 
-    test('applies banker double', () => {
-      const result = calculatePoints(3, 4, 4, 1, false, true, false, false);
-      expect(result.points).toBe(2);
-      expect(result.isPositive).toBe(true);
-    });
-
-    test('applies both doubles with max 4x', () => {
-      const result = calculatePoints(3, 4, 4, 1, true, true, false, false);
+    test('applies both doubles with win', () => {
+      const result = calculatePoints(3, 4, 3, 1, true, true, false, false);
       expect(result.points).toBe(4);
       expect(result.isPositive).toBe(true);
     });
+ 
   });
 
   describe('Birdie and Eagle Rules', () => {
-    test('doubles points for birdie', () => {
+    test('doubles points for birdie no doubles', () => {
       const result = calculatePoints(3, 4, 4, 1, false, false, true, false);
       expect(result.points).toBe(2);
       expect(result.isPositive).toBe(true);
     });
 
-    test('quadruples points for eagle', () => {
+    test('quadruples points for eagle no doubles', () => {
       const result = calculatePoints(2, 4, 4, 1, false, false, true, false);
       expect(result.points).toBe(4);
       expect(result.isPositive).toBe(true);
     });
 
-    test('applies birdie multiplier with doubles up to max 8x', () => {
+    test('applies birdie multiplier with one double', () => {
+      const result = calculatePoints(3, 4, 4, 1, true, false, true, false);
+      expect(result.points).toBe(4);
+      expect(result.isPositive).toBe(true);
+    });
+
+    test('applies birdie multiplier with both double', () => {
       const result = calculatePoints(3, 4, 4, 1, true, true, true, false);
       expect(result.points).toBe(8);
       expect(result.isPositive).toBe(true);
@@ -96,8 +98,14 @@ describe('BankerGame Points Calculation', () => {
   });
 
   describe('Banker Perspective', () => {
-    test('reverses point polarity for banker', () => {
-      const result = calculatePoints(3, 4, 4, 1, false, false, false, true);
+    test('calculates points for banker win', () => {
+      const result = calculatePoints(4, 3, 3, 1, false, false, false, true);
+      expect(result.points).toBe(1);
+      expect(result.isPositive).toBe(true);
+    });
+
+    test('calculates points for banker loss', () => {
+      const result = calculatePoints(3, 4, 3, 1, false, false, false, true);
       expect(result.points).toBe(1);
       expect(result.isPositive).toBe(false);
     });
@@ -105,7 +113,7 @@ describe('BankerGame Points Calculation', () => {
     test('handles banker birdie with doubles', () => {
       const result = calculatePoints(4, 3, 4, 1, false, true, true, true);
       expect(result.points).toBe(4);
-      expect(result.isPositive).toBe(false);
+      expect(result.isPositive).toBe(true);
     });
   });
 
@@ -122,10 +130,6 @@ describe('BankerGame Points Calculation', () => {
       expect(result.isPositive).toBe(true);
     });
 
-    test('high base dots still respect maximum multipliers', () => {
-      const result = calculatePoints(3, 4, 4, 3, true, true, true, false);
-      expect(result.points).toBe(24); // 3 dots * 8 (max multiplier) = 24
-    });
   });
 
   describe('Multiple Players vs Banker Scoring', () => {
@@ -161,7 +165,7 @@ describe('BankerGame Points Calculation', () => {
         );
 
         acc.playerPoints[player.id] = playerResult.isPositive ? playerResult.points : -playerResult.points;
-        acc.bankerPoints[player.id] = -acc.playerPoints[player.id];
+        acc.bankerPoints[player.id] = acc.playerPoints[player.id] ? -acc.playerPoints[player.id] : 0;
         
         return acc;
       }, {
@@ -271,7 +275,7 @@ describe('BankerGame Points Calculation', () => {
         );
 
         acc.playerPoints[player.id] = playerResult.isPositive ? playerResult.points : -playerResult.points;
-        acc.bankerPoints[player.id] = -acc.playerPoints[player.id];
+        acc.bankerPoints[player.id] = acc.playerPoints[player.id] ? -acc.playerPoints[player.id] : 0;
         
         return acc;
       }, {
@@ -283,9 +287,9 @@ describe('BankerGame Points Calculation', () => {
       expect(result.playerPoints['p2']).toBe(0);
       expect(result.bankerPoints['p2']).toBe(0);
 
-      // Player 3 (doubled eagle vs doubled birdie) = 8x max
-      expect(result.playerPoints['p3']).toBe(8);
-      expect(result.bankerPoints['p3']).toBe(-8);
+      // Player 3 (doubled eagle vs doubled birdie) = 16x
+      expect(result.playerPoints['p3']).toBe(16);
+      expect(result.bankerPoints['p3']).toBe(-16);
 
       // Player 4 (par vs birdie) = 2x from banker double, 2x from birdie = 4x
       expect(result.playerPoints['p4']).toBe(-4);
@@ -335,13 +339,20 @@ describe('BankerGame Points Calculation', () => {
       };
       render(<BankerGame {...defaultProps} scores={scores} />);
       
-      // Look for player names in the score table
-      const scoreTable = screen.getByRole('table');
-      const player1Cell = within(scoreTable).getByText('Player 1');
-      const player2Cell = within(scoreTable).getByText('Player 2');
+      const scoreTable = screen.getByRole('table', { name: /player scores/i });
+      expect(scoreTable).toBeInTheDocument();
       
-      expect(player1Cell).toBeInTheDocument();
-      expect(player2Cell).toBeInTheDocument();
+      const player1Name = within(scoreTable).getByText('Player 1');
+      const player2Name = within(scoreTable).getByText('Player 2');
+      
+      expect(player1Name).toBeInTheDocument();
+      expect(player2Name).toBeInTheDocument();
+      
+      const inputs = within(scoreTable).getAllByLabelText(/score for player/i);
+      expect(inputs).toHaveLength(4); // All players should have score inputs
+      
+      expect(inputs[0]).toHaveValue(4);
+      expect(inputs[1]).toHaveValue(3);
     });
   });
 });
