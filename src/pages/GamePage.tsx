@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { Game } from '../components/Game';
 import { Player, PlayerForm } from '../components/PlayerForm';
-import { HoleSetup } from '../types/game';
+import { GameType } from '../types/game';
 import { Box, Paper, Tab, Tabs } from '@mui/material';
 import { Scorecard } from '../components/Scorecard';
 
 export const GamePage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>({});
-  const [holeSetups, setHoleSetups] = useState<{ [key: number]: HoleSetup }>({});
   const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
+  const [gameType, setGameType] = useState<GameType>('banker');
+  const [currentHole, setCurrentHole] = useState(1);
 
   // Default holes for standalone game
   const defaultHoles = Array.from({ length: 18 }, (_, i) => ({
@@ -18,13 +19,6 @@ export const GamePage = () => {
     par: 4,
     strokeIndex: i + 1
   }));
-
-  const handleHoleSetupChange = (holeNumber: number, setup: Partial<HoleSetup>) => {
-    setHoleSetups(prev => ({
-      ...prev,
-      [holeNumber]: { ...prev[holeNumber], ...setup }
-    }));
-  };
 
   const handlePlayerChange = (updatedPlayers: Player[]) => {
     setPlayers(updatedPlayers);
@@ -92,10 +86,13 @@ export const GamePage = () => {
       {selectedTab === 2 && (
         <Game
           holes={defaultHoles}
+          courseId={selectedCourseId}
           players={players}
           scores={scores}
-          holeSetups={holeSetups}
-          onHoleSetupChange={handleHoleSetupChange}
+          currentHole={currentHole}
+          onCurrentHoleChange={setCurrentHole}
+          gameType={gameType}
+          onGameTypeChange={setGameType}
           onScoreChange={handleScoreChange}
         />
       )}

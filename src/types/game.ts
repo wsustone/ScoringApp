@@ -22,6 +22,10 @@ export interface GolfCourse {
   tees: GolfTee[];
 }
 
+export interface GameOptions {
+  doubleBirdieBets: boolean;
+}
+
 export interface HoleSetup {
   banker: string | undefined;
   dots: number;

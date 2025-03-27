@@ -162,7 +162,8 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                   return (
                     <TableCell key={`${hole.number}-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
                       <Box sx={{ position: 'relative' }}>
-                        <input
+                        <Box
+                          component="input"
                           type="number"
                           min="1"
                           max="20"
@@ -172,19 +173,25 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                             if (value !== null && (value < 1 || value > 20)) return;
                             onScoreChange(player.id, hole.number, value);
                           }}
-                          style={{
+                          sx={{
                             width: '40px',
                             textAlign: 'center',
-                            border: '1px solid #ddd',
+                            border: '1px solid',
+                            borderColor: 'grey.400',
                             borderRadius: '4px',
                             padding: '4px',
+                            backgroundColor: 'background.paper',
                             color: score && hole.par
                               ? score < hole.par 
-                                ? '#ff0000' 
+                                ? 'error.main'
                                 : score === hole.par 
-                                  ? '#0000ff'
-                                  : '#000000'
-                              : '#000000'
+                                  ? 'primary.main'
+                                  : 'text.primary'
+                              : 'text.primary',
+                            '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
+                              display: 'none'
+                            },
+                            appearance: 'textfield'
                           }}
                         />
                         {strokesGiven > 0 && (
@@ -192,14 +199,14 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                             position: 'absolute',
                             top: -8,
                             right: 0,
-                            color: '#FFD700',
+                            color: 'warning.main',
                             fontSize: '0.8em'
                           }}>
                             {'*'.repeat(strokesGiven)}
                           </Box>
                         )}
                         {adjustedScore !== null && (
-                          <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                          <div style={{ fontSize: '0.7em', color: 'text.secondary' }}>
                             {adjustedScore}
                           </div>
                         )}
@@ -210,7 +217,7 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                 <TableCell key={`in-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
                   <Typography variant="body1">{frontNineTotal || ''}</Typography>
                   {frontNineTotal > 0 && (
-                    <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                    <div style={{ fontSize: '0.7em', color: 'text.secondary' }}>
                       {frontNineAdjusted}
                     </div>
                   )}
@@ -226,7 +233,8 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                   return (
                     <TableCell key={`${hole.number}-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
                       <Box sx={{ position: 'relative' }}>
-                        <input
+                        <Box
+                          component="input"
                           type="number"
                           min="1"
                           max="20"
@@ -236,19 +244,25 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                             if (value !== null && (value < 1 || value > 20)) return;
                             onScoreChange(player.id, hole.number, value);
                           }}
-                          style={{
+                          sx={{
                             width: '40px',
                             textAlign: 'center',
-                            border: '1px solid #ddd',
+                            border: '1px solid',
+                            borderColor: 'grey.400',
                             borderRadius: '4px',
                             padding: '4px',
+                            backgroundColor: 'background.paper',
                             color: score && hole.par
                               ? score < hole.par 
-                                ? '#ff0000' 
+                                ? 'error.main'
                                 : score === hole.par 
-                                  ? '#0000ff'
-                                  : '#000000'
-                              : '#000000'
+                                  ? 'primary.main'
+                                  : 'text.primary'
+                              : 'text.primary',
+                            '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
+                              display: 'none'
+                            },
+                            appearance: 'textfield'
                           }}
                         />
                         {strokesGiven > 0 && (
@@ -256,14 +270,14 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                             position: 'absolute',
                             top: -8,
                             right: 0,
-                            color: '#FFD700',
+                            color: 'warning.main',
                             fontSize: '0.8em'
                           }}>
                             {'*'.repeat(strokesGiven)}
                           </Box>
                         )}
                         {adjustedScore !== null && (
-                          <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                          <div style={{ fontSize: '0.7em', color: 'text.secondary' }}>
                             {adjustedScore}
                           </div>
                         )}
@@ -274,7 +288,7 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                 <TableCell key={`out-${player.id}`} align="center" sx={{ minWidth: '60px' }}>
                   <Typography variant="body1">{backNineTotal || ''}</Typography>
                   {backNineTotal > 0 && (
-                    <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                    <div style={{ fontSize: '0.7em', color: 'text.secondary' }}>
                       {backNineAdjusted}
                     </div>
                   )}
@@ -282,7 +296,7 @@ export const Scorecard = ({ holes, players, scores, onScoreChange, selectedCours
                 <TableCell align="center" sx={{ minWidth: '60px' }}>
                   <Typography variant="body1" sx={{ fontWeight: 'bold' }}>{total || ''}</Typography>
                   {total > 0 && (
-                    <div style={{ fontSize: '0.7em', color: 'grey' }}>
+                    <div style={{ fontSize: '0.7em', color: 'text.secondary' }}>
                       {netScore}
                     </div>
                   )}

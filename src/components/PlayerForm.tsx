@@ -139,15 +139,26 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {players.map((player) => (
           <Paper key={player.id} sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2, 
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              '& > *': { 
+                minWidth: { xs: '100%', sm: 'auto' } 
+              },
+              '& > .MuiFormControl-root': {
+                flex: { xs: '1 1 100%', sm: 'auto' }
+              }
+            }}>
               <TextField
                 label="Name"
                 value={player.name}
                 onChange={(e) => handlePlayerChange(player.id, 'name', e.target.value)}
-                sx={{ flex: 2 }}
+                sx={{ flex: { xs: '1 1 100%', sm: 2 } }}
               />
               {selectedCourse?.tees && (
-                <FormControl sx={{ width: '180px' }}>
+                <FormControl sx={{ width: { xs: '100%', sm: '180px' } }}>
                   <InputLabel>Tee</InputLabel>
                   <Select
                     value={player.teeId}
@@ -167,12 +178,16 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
                 type="number"
                 value={player.handicap}
                 onChange={(e) => handlePlayerChange(player.id, 'handicap', parseInt(e.target.value) || 0)}
-                sx={{ width: '120px' }}
+                sx={{ width: { xs: '100%', sm: '120px' } }}
               />
               <IconButton
                 color="error"
                 onClick={() => handleRemovePlayer(player.id)}
-                sx={{ ml: 'auto' }}
+                sx={{ 
+                  ml: { xs: 0, sm: 'auto' },
+                  width: 'auto !important',
+                  flex: '0 0 auto !important'
+                }}
                 disabled={players.length <= 1}
               >
                 <DeleteIcon />
