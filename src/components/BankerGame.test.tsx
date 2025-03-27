@@ -57,14 +57,14 @@ describe('BankerGame Points Calculation', () => {
 
   
   describe('Double Betting Rules', () => {
-    test('applies double and win with par', () => {
-      const result = calculatePoints(3, 4, 3, 1, true, false, false, false);
+    test('applies double bet when player wins', () => {
+      const result = calculatePoints(3, 4, 4, 1, true, false, false, false);
       expect(result.points).toBe(2);
       expect(result.isPositive).toBe(true);
     });
 
-    test('applies both doubles with win', () => {
-      const result = calculatePoints(3, 4, 3, 1, true, true, false, false);
+    test('applies both player and banker doubles', () => {
+      const result = calculatePoints(3, 4, 4, 1, true, true, false, false);
       expect(result.points).toBe(4);
       expect(result.isPositive).toBe(true);
     });
@@ -113,6 +113,26 @@ describe('BankerGame Points Calculation', () => {
     test('handles banker birdie with doubles', () => {
       const result = calculatePoints(4, 3, 4, 1, false, true, true, true);
       expect(result.points).toBe(4);
+      expect(result.isPositive).toBe(true);
+    });
+  });
+
+  describe('Triple Par', () => {
+    test('applies triple multiplier with one triple', () => {
+      const result = calculatePoints(3, 4, 3, 1, false, true, false, false);
+      expect(result.points).toBe(3);
+      expect(result.isPositive).toBe(true);
+    });
+
+    test('applies triple multiplier with both triple', () => {
+      const result = calculatePoints(3, 4, 3, 1, true, true, false, false);
+      expect(result.points).toBe(9);
+      expect(result.isPositive).toBe(true);
+    });
+
+    test('applies triple multiplier with one triple and one birdie', () => {
+      const result = calculatePoints(2, 4, 3, 1, true, false, true, false);
+      expect(result.points).toBe(6);
       expect(result.isPositive).toBe(true);
     });
   });
@@ -324,7 +344,7 @@ describe('BankerGame Points Calculation', () => {
 
     test('renders doubles section', () => {
       render(<BankerGame {...defaultProps} />);
-      expect(screen.getByText(/doubles/i)).toBeInTheDocument();
+      expect(screen.getByText(/double bet/i)).toBeInTheDocument();
     });
 
     test('renders birdie bet option', () => {

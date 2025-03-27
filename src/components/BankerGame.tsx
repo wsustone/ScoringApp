@@ -60,27 +60,35 @@ export const calculatePoints = (
   // Start with base dots
   let dots = baseDots;
 
+  const tripleBet = holePar === 3;
   // Apply banker's double first if they doubled
   if (bankerDoubled) {
+    if(tripleBet){
+      dots *= 3;
+    }else{
     dots *= 2;
+    }
   }
 
-  // Apply player's double if they doubled (max 4x base)
+  // Apply player's double if they doubled
   if (playerDoubled) {
-    dots *= 2;
+    if(tripleBet){
+      dots *= 3;
+    }else{
+      dots *= 2;
+    }
   }
 
   // Check for birdies/eagles if enabled
   if (doubleBirdieBets) {
     let multiplier = 1;
-    // Player or banker birdie/eagle multipliers only apply one of these options since score cant be the same here
     if (playerScore === holePar - 1 || bankerScore === holePar - 1) { // Birdie
       multiplier = 2;
     }
     if (playerScore === holePar - 2 || bankerScore === holePar - 2) { // Eagle
       multiplier = 4;
     }
-    dots *= multiplier; // only apply the greatest multiplier
+    dots *= multiplier;
   }
 
   if (isBanker) {
@@ -89,6 +97,7 @@ export const calculatePoints = (
   
   return { points: dots, isPositive: diff < 0 };
 };
+
 
 export const BankerGame: React.FC<BankerGameProps> = ({ 
   players, 
@@ -310,7 +319,9 @@ export const BankerGame: React.FC<BankerGameProps> = ({
                     </FormControl>
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle2" gutterBottom>Doubles</Typography>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {holes.find(h => h.number === currentHole)?.par === 3 ? 'Triple Bet' : 'Double Bet'}
+                    </Typography>
                     {players.map(player => (
                       <Button
                         key={player.id}
