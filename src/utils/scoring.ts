@@ -51,7 +51,9 @@ export const calculatePoints = (
     multiplier *= birdieEagleMultiplier;
   }
 
+  // Calculate base points (dots) and determine winner
   const points = dots * multiplier;
-  // Points are positive if player wins, negative if banker wins
+  
+  // Return positive points if player wins, negative if banker wins
   return playerScore < bankerScore ? points : -points;
 };

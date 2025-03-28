@@ -21,7 +21,8 @@ import {
   TextField,
   Typography,
   Alert,
-  Snackbar
+  Snackbar,
+  ToggleButton
 } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { Player } from '../types/player';
@@ -35,7 +36,6 @@ interface BankerGameProps {
   holes: { id: string; number: number; par: number }[];
   currentHole: number;
   onCurrentHoleChange: (hole: number) => void;
-  onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
   courseName: string;
 }
 
@@ -45,7 +45,6 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   holes,
   currentHole,
   onCurrentHoleChange,
-  onScoreChange,
   courseName
 }: BankerGameProps) => {
   const [gameOptions, setGameOptions] = useState<GameOptions>(defaultGameOptions);
@@ -383,6 +382,40 @@ export const BankerGame: React.FC<BankerGameProps> = ({
               </FormControl>
             </Grid>
           </Grid>
+          
+          {/* Doubles Section */}
+          <Box mt={2}>
+            <Typography variant="subtitle1" gutterBottom>
+              Double Bets
+            </Typography>
+            <Grid container spacing={2}>
+              {players.map((player) => (
+                <Grid item xs={12} sm={6} md={4} key={player.id}>
+                  <ToggleButton
+                    value={player.id}
+                    selected={currentHoleSetup.doubles[player.id] || false}
+                    onChange={() => handleDoubleChange(
+                      player.id,
+                      !currentHoleSetup.doubles[player.id]
+                    )}
+                    fullWidth
+                    color="primary"
+                    sx={{
+                      '&.Mui-selected': {
+                        backgroundColor: 'primary.main',
+                        color: 'primary.contrastText',
+                        '&:hover': {
+                          backgroundColor: 'primary.dark',
+                        },
+                      },
+                    }}
+                  >
+                    {player.name}
+                  </ToggleButton>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
         </Paper>
       </Box>
 
@@ -398,37 +431,39 @@ export const BankerGame: React.FC<BankerGameProps> = ({
                 <TableRow>
                   <TableCell>Player</TableCell>
                   <TableCell align="center">Score</TableCell>
-                  <TableCell align="center">Double</TableCell>
                   <TableCell align="right">Points</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {players.map((player) => (
                   <TableRow key={player.id}>
-                    <TableCell>{player.name}</TableCell>
-                    <TableCell align="center">
-                      <TextField
-                        type="number"
-                        value={scores[player.id]?.[currentHole] || ''}
-                        onChange={(e) => onScoreChange(
-                          player.id,
-                          currentHole,
-                          e.target.value === '' ? null : parseInt(e.target.value)
-                        )}
-                        size="small"
-                        inputProps={{ min: 1 }}
-                        sx={{ width: 80 }}
-                      />
+                    <TableCell>
+                      {player.name}
+                      {currentHoleSetup.doubles[player.id] && (
+                        <Typography component="span" color="primary" sx={{ ml: 1 }}>
+                          (Double)
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell align="center">
-                      <Checkbox
-                        checked={currentHoleSetup.doubles[player.id] || false}
-                        onChange={(e) => handleDoubleChange(player.id, e.target.checked)}
-                        disabled={!currentHoleSetup.bankerId || currentHoleSetup.bankerId === player.id}
-                      />
+                      {scores[player.id]?.[currentHole] || '-'}
                     </TableCell>
-                    <TableCell align="right">
-                      {calculateHolePoints(player.id)}
+                    <TableCell 
+                      align="right"
+                      sx={{
+                        color: (theme) => {
+                          const points = calculateHolePoints(player.id);
+                          if (points > 0) return theme.palette.success.main;
+                          if (points < 0) return theme.palette.error.main;
+                          return theme.palette.text.primary;
+                        },
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      {(() => {
+                        const points = calculateHolePoints(player.id);
+                        return points === 0 ? '-' : points > 0 ? `+${points}` : points;
+                      })()}
                     </TableCell>
                   </TableRow>
                 ))}

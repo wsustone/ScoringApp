@@ -22,7 +22,6 @@ interface GameProps {
   onCurrentHoleChange: (hole: number) => void;
   gameType: GameType;
   onGameTypeChange: (type: GameType) => void;
-  onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
 }
 
 export const Game: React.FC<GameProps> = ({
@@ -32,8 +31,7 @@ export const Game: React.FC<GameProps> = ({
   currentHole,
   onCurrentHoleChange,
   gameType,
-  onGameTypeChange,
-  onScoreChange
+  onGameTypeChange
 }: GameProps) => {
   const handleGameTypeChange = (event: SelectChangeEvent) => {
     const value = event.target.value;
@@ -66,15 +64,16 @@ export const Game: React.FC<GameProps> = ({
 
           {/* Game Type Specific Component */}
           {gameType === 'banker' && (
-            <BankerGame
-              players={players}
-              scores={scores}
-              holes={holes}
-              currentHole={currentHole}
-              onCurrentHoleChange={onCurrentHoleChange}
-              onScoreChange={onScoreChange}
-              courseName={''} // Added courseName prop
-            />
+            <Grid item xs={12}>
+              <BankerGame
+                players={players}
+                scores={scores}
+                holes={holes}
+                currentHole={currentHole}
+                onCurrentHoleChange={onCurrentHoleChange}
+                courseName={''}
+              />
+            </Grid>
           )}
         </Grid>
       </Box>
