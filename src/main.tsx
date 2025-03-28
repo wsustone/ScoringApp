@@ -5,9 +5,10 @@ import { apolloClient } from './graphql/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App';
 import { GamePage } from './pages/GamePage';
-import { CourseList } from './components/CourseList';
 import { CourseDetail } from './components/CourseDetail';
-import { ActiveRounds } from './components/ActiveRounds';
+import { Dashboard } from './pages/Dashboard';
+import { AddPlayer } from './pages/AddPlayer';
+import { EditPlayer } from './pages/EditPlayer';
 import './index.css';
 
 const router = createBrowserRouter([
@@ -17,11 +18,15 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <ActiveRounds />,
+        element: <Dashboard />,
       },
       {
-        path: 'courses',
-        element: <CourseList onCourseSelect={() => {}} />,
+        path: 'add-player/:courseId',
+        element: <AddPlayer />,
+      },
+      {
+        path: 'edit-player/:courseId/:playerId',
+        element: <EditPlayer />,
       },
       {
         path: 'course/:id',

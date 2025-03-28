@@ -1,111 +1,126 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@apollo/client';
 import { useParams } from 'react-router-dom';
 import { Game } from '../components/Game';
-import { Player, PlayerForm } from '../components/PlayerForm';
-import { GameType, GolfHole } from '../types/game';
-import { Box, Paper, Tab, Tabs } from '@mui/material';
+import { Player } from '../components/PlayerForm';
+import type { GolfHole } from '../types/game';
+import { Box, Paper, Tab, Tabs, Typography, Alert, CircularProgress } from '@mui/material';
 import { Scorecard } from '../components/Scorecard';
-import { GET_COURSE_HOLES } from '../graphql/queries';
+import { GET_ROUND } from '../graphql/queries';
 
 export const GamePage = () => {
   const { id: roundId } = useParams<{ id: string }>();
   const [players, setPlayers] = useState<Player[]>([]);
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>({});
-  const [selectedCourseId, setSelectedCourseId] = useState('');
   const [selectedTab, setSelectedTab] = useState(0);
-  const [gameType, setGameType] = useState<GameType>('banker');
   const [currentHole, setCurrentHole] = useState(1);
 
-  // Get course holes data
-  const { data: courseData } = useQuery(GET_COURSE_HOLES, {
-    variables: { courseId: selectedCourseId },
-    skip: !selectedCourseId
+  const { loading, error, data } = useQuery(GET_ROUND, {
+    variables: { id: roundId },
+    skip: !roundId
   });
 
-  // Use course holes if available, otherwise use default
-  const holes: GolfHole[] = courseData?.golfCourse?.tees?.[0]?.holes || Array.from({ length: 18 }, (_, i) => ({
-    number: i + 1,
-    par: 4,
-    strokeIndex: i + 1
+  useEffect(() => {
+    if (data?.getRound) {
+      const round = data.getRound;
+      
+      // Convert round players to Player type
+      const roundPlayers = round.players.map((p: any) => ({
+        id: p.playerId,
+        name: p.playerName,
+        handicap: p.handicap,
+        teeId: p.teeId
+      }));
+      setPlayers(roundPlayers);
+
+      // Initialize scores from round data
+      const roundScores: { [key: string]: { [key: number]: number | null } } = {};
+      round.players.forEach((player: any) => {
+        roundScores[player.playerId] = {};
+        round.holes.forEach((hole: any) => {
+          const score = round.scores.find(
+            (s: any) => s.playerId === player.playerId && s.holeId === hole.id
+          );
+          roundScores[player.playerId][hole.number] = score ? score.score : null;
+        });
+      });
+      setScores(roundScores);
+    }
+  }, [data]);
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !data?.getRound) {
+    return (
+      <Box m={4}>
+        <Alert severity="error">
+          {error ? error.message : 'Round not found'}
+        </Alert>
+      </Box>
+    );
+  }
+
+  const round = data.getRound;
+  const holes: GolfHole[] = round.holes.map((hole: any) => ({
+    number: hole.number,
+    par: hole.par,
+    strokeIndex: hole.strokeIndex || hole.number
   }));
-
-  const handlePlayerChange = (updatedPlayers: Player[]) => {
-    setPlayers(updatedPlayers);
-    // Initialize scores for new players with all holes set to null
-    const newScores = { ...scores };
-    updatedPlayers.forEach(player => {
-      if (!newScores[player.id]) {
-        newScores[player.id] = {};
-        // Initialize all holes with null scores
-        for (let i = 1; i <= 18; i++) {
-          newScores[player.id][i] = null;
-        }
-      }
-    });
-    setScores(newScores);
-  };
-
-  const handleCourseChange = (courseId: string) => {
-    setSelectedCourseId(courseId);
-  };
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);
   };
 
-  const handleScoreChange = (playerId: string, hole: number, score: number | null) => {
+  const handleScoreChange = (playerId: string, holeNumber: number, score: number | null) => {
     setScores(prev => ({
       ...prev,
       [playerId]: {
         ...prev[playerId],
-        [hole]: score
+        [holeNumber]: score
       }
     }));
   };
 
   return (
-    <Box sx={{ width: '100%', p: 2 }}>
-      <Paper sx={{ width: '100%', mb: 2 }}>
-        <Tabs value={selectedTab} onChange={handleTabChange} centered>
-          <Tab label="Players" />
-          <Tab label="Scorecard" disabled={!selectedCourseId || players.length === 0} />
-          <Tab label="Game" disabled={!selectedCourseId || players.length === 0} />
-        </Tabs>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', mt: 4, px: 2 }}>
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h5" gutterBottom>
+          {round.courseName} - Round
+        </Typography>
+
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+          <Tabs value={selectedTab} onChange={handleTabChange}>
+            <Tab label="Game" />
+            <Tab label="Scorecard" />
+          </Tabs>
+        </Box>
+
+        {selectedTab === 0 && (
+          <Game
+            players={players}
+            holes={holes}
+            currentHole={currentHole}
+            onCurrentHoleChange={setCurrentHole}
+            scores={scores}
+            onScoreChange={handleScoreChange}
+          />
+        )}
+
+        {selectedTab === 1 && (
+          <Scorecard
+            players={players}
+            holes={holes}
+            scores={scores}
+            onScoreChange={handleScoreChange}
+          />
+        )}
       </Paper>
-
-      {selectedTab === 0 && (
-        <PlayerForm 
-          players={players} 
-          onPlayersChange={handlePlayerChange}
-          selectedCourseId={selectedCourseId}
-          onCourseChange={handleCourseChange}
-        />
-      )}
-
-      {selectedTab === 1 && (
-        <Scorecard
-          holes={holes}
-          players={players}
-          scores={scores}
-          onScoreChange={handleScoreChange}
-          selectedCourseId={selectedCourseId}
-        />
-      )}
-
-      {selectedTab === 2 && (
-        <Game
-          holes={holes}
-          players={players}
-          scores={scores}
-          currentHole={currentHole}
-          onCurrentHoleChange={setCurrentHole}
-          gameType={gameType}
-          onGameTypeChange={setGameType}
-          onScoreChange={handleScoreChange}
-          roundId={roundId}
-        />
-      )}
     </Box>
   );
 };

@@ -1,88 +1,82 @@
-import React from 'react';
-import { 
-  Box, 
-  Container, 
-  FormControl, 
-  Grid, 
-  InputLabel, 
-  MenuItem, 
-  Select, 
-  SelectChangeEvent,
-  Paper
-} from '@mui/material';
+import { Box, Grid, Button, TextField, Typography } from '@mui/material';
 import { Player } from './PlayerForm';
-import { BankerGame } from './BankerGame';
-import type { GameType, GolfHole } from '../types/game';
+import { GolfHole } from '../types/game';
 
 interface GameProps {
-  holes: GolfHole[];
   players: Player[];
-  scores: { [key: string]: { [key: number]: number | null } };
+  holes: GolfHole[];
   currentHole: number;
   onCurrentHoleChange: (hole: number) => void;
-  gameType: GameType;
-  onGameTypeChange: (type: GameType) => void;
-  onScoreChange: (playerId: string, hole: number, score: number | null) => void;
-  roundId: string | undefined;
+  scores: { [key: string]: { [key: number]: number | null } };
+  onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
 }
 
-export const Game: React.FC<GameProps> = ({
-  holes,
+export const Game = ({
   players,
-  scores,
+  holes,
   currentHole,
   onCurrentHoleChange,
-  gameType,
-  onGameTypeChange,
+  scores,
   onScoreChange,
-  roundId
 }: GameProps) => {
-  const handleGameTypeChange = (event: SelectChangeEvent) => {
-    const value = event.target.value;
-    if (value === 'banker' || value === 'mrpar' || value === 'wolf') {
-      onGameTypeChange(value as GameType);
+  const currentHoleData = holes.find(h => h.number === currentHole);
+
+  const handlePrevHole = () => {
+    if (currentHole > 1) {
+      onCurrentHoleChange(currentHole - 1);
+    }
+  };
+
+  const handleNextHole = () => {
+    if (currentHole < 18) {
+      onCurrentHoleChange(currentHole + 1);
     }
   };
 
   return (
-    <Container>
-      <Box sx={{ my: 4 }}>
-        <Grid container spacing={3}>
-          {/* Game Type Selection */}
-          <Grid item xs={12}>
-            <Paper sx={{ p: 2 }}>
-              <FormControl fullWidth>
-                <InputLabel>Game Type</InputLabel>
-                <Select
-                  value={gameType}
-                  label="Game Type"
-                  onChange={handleGameTypeChange}
-                >
-                  <MenuItem value="banker">Banker</MenuItem>
-                  <MenuItem value="mrpar">Mr. Par</MenuItem>
-                  <MenuItem value="wolf">Wolf</MenuItem>
-                </Select>
-              </FormControl>
-            </Paper>
-          </Grid>
-
-          {/* Game Component */}
-          <Grid item xs={12}>
-            {gameType === 'banker' && (
-              <BankerGame
-                players={players}
-                scores={scores}
-                holes={holes}
-                currentHole={currentHole}
-                onCurrentHoleChange={onCurrentHoleChange}
-                roundId={roundId}
-                onScoreChange={onScoreChange}
-              />
-            )}
-            {/* Add other game type components here */}
-          </Grid>
+    <Box>
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Typography variant="h6">
+              Hole {currentHole} - Par {currentHoleData?.par || 4}
+            </Typography>
+            <Box>
+              <Button onClick={handlePrevHole} disabled={currentHole === 1}>
+                Previous
+              </Button>
+              <Button onClick={handleNextHole} disabled={currentHole === 18}>
+                Next
+              </Button>
+            </Box>
+          </Box>
         </Grid>
-      </Box>
-    </Container>
+
+        {players.map((player) => (
+          <Grid item xs={12} sm={6} md={4} key={player.id}>
+            <Box p={2} border={1} borderRadius={1} borderColor="divider">
+              <Typography variant="subtitle1" gutterBottom>
+                {player.name}
+              </Typography>
+              <TextField
+                label="Score"
+                type="number"
+                value={scores[player.id]?.[currentHole] || ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  onScoreChange(
+                    player.id,
+                    currentHole,
+                    value === '' ? null : parseInt(value)
+                  );
+                }}
+                fullWidth
+                size="small"
+              />
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
   );
 };

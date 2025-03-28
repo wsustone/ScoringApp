@@ -27,8 +27,29 @@ interface Round {
   players: Player[];
 }
 
+const formatDate = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'Invalid date';
+  }
+};
+
 export function ActiveRounds() {
-  const { loading, error, data } = useQuery(GET_ACTIVE_ROUNDS);
+  const { loading, error, data } = useQuery(GET_ACTIVE_ROUNDS, {
+    pollInterval: 30000, // Poll every 30 seconds for updates
+  });
   const navigate = useNavigate();
 
   if (loading) {
@@ -91,17 +112,16 @@ export function ActiveRounds() {
             {rounds.map((round: Round) => (
               <TableRow key={round.id}>
                 <TableCell>{round.courseName}</TableCell>
-                <TableCell>
-                  {new Date(round.startTime).toLocaleString()}
-                </TableCell>
+                <TableCell>{formatDate(round.startTime)}</TableCell>
                 <TableCell>
                   {round.players.map(p => `${p.playerName} (${p.handicap})`).join(', ')}
                 </TableCell>
                 <TableCell>
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     color="primary"
-                    onClick={() => navigate(`/round/${round.id}`)}
+                    size="small"
+                    onClick={() => navigate(`/game/${round.id}`)}
                   >
                     Continue Round
                   </Button>
@@ -113,4 +133,4 @@ export function ActiveRounds() {
       </TableContainer>
     </Box>
   );
-}
+};

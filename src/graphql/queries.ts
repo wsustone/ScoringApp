@@ -73,7 +73,7 @@ export const GET_ROUND = gql`
       }
       holes {
         id
-        holeNumber
+        number
         par
       }
       scores {
