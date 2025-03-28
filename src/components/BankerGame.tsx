@@ -140,7 +140,7 @@ export const BankerGame: React.FC<BankerGameProps> = ({
     }
   }, [scores, holeSetups, gameOptions, roundStarted, roundId]);
 
-  const handleHoleSetupChange = (holeNumber: number, bankerId: string | null, dots: number) => {
+  const handleHoleSetupChange = (holeNumber: number, bankerId: string, dots: number) => {
     setHoleSetups(prev => ({
       ...prev,
       [holeNumber]: {
@@ -157,28 +157,67 @@ export const BankerGame: React.FC<BankerGameProps> = ({
     doubles: {}
   };
 
-  const calculateHolePoints = (playerId: string) => {
-    const playerScore = scores[playerId]?.[currentHole];
-    const bankerScore = scores[currentHoleSetup.bankerId || '']?.[currentHole];
-    const hole = holes.find(h => h.number === currentHole);
-
-    if (!playerScore || !bankerScore || !hole) return 0;
-
-    return calculatePoints(
-      playerScore,
-      bankerScore,
-      hole.par,
-      currentHoleSetup.dots,
-      currentHoleSetup.doubles[playerId] || false,
-      currentHoleSetup.doubles[currentHoleSetup.bankerId || ''] || false,
-      gameOptions.doubleBirdieBets,
-      gameOptions.useGrossBirdies,
-      hole.par === 3,
-      gameOptions.par3Triples
-    );
+  const sortPlayersForBankerCalc = (players: Player[], bankerId: string) => {
+    return players.sort((a, b) => {
+      if (a.id === bankerId) return 1;
+      if (b.id === bankerId) return -1;
+      return 0;
+    });
   };
 
-  const handleBankerChange = (bankerId: string | null) => {
+  const calculateHolePoints = (playerId: string): number => {
+    if (!currentHoleSetup.bankerId || !scores[playerId]?.[currentHole]) return 0;
+
+    const sortedPlayers = sortPlayersForBankerCalc(players, currentHoleSetup.bankerId);
+    
+    if (playerId === currentHoleSetup.bankerId) {
+      return sortedPlayers.reduce((total, player) => {
+        if (player.id === currentHoleSetup.bankerId) return total;
+        
+        const playerScore = scores[player.id]?.[currentHole] ?? null;
+        const bankerScore = scores[currentHoleSetup.bankerId]?.[currentHole] ?? null;
+        const holePar = holes.find(h => h.number === currentHole)?.par || 0;
+        
+        if (playerScore === null || bankerScore === null) return total;
+
+        const points = calculatePoints(
+          playerScore,
+          bankerScore,
+          holePar,
+          currentHoleSetup.dots,
+          currentHoleSetup.doubles[player.id] || false,
+          currentHoleSetup.doubles[currentHoleSetup.bankerId] || false,
+          gameOptions.doubleBirdieBets,
+          gameOptions.useGrossBirdies,
+          holePar === 3,
+          gameOptions.par3Triples
+        );
+        
+        return total - points; // Negate points since this is banker's perspective
+      }, 0);
+    } else {
+      const playerScore = scores[playerId]?.[currentHole] ?? null;
+      const bankerScore = scores[currentHoleSetup.bankerId]?.[currentHole] ?? null;
+      const holePar = holes.find(h => h.number === currentHole)?.par || 0;
+      
+      if (playerScore === null || bankerScore === null) return 0;
+      
+      return calculatePoints(
+        playerScore,
+        bankerScore,
+        holePar,
+        currentHoleSetup.dots,
+        currentHoleSetup.doubles[playerId] || false,
+        currentHoleSetup.doubles[currentHoleSetup.bankerId] || false,
+        gameOptions.doubleBirdieBets,
+        gameOptions.useGrossBirdies,
+        holePar === 3,
+        gameOptions.par3Triples
+      );
+    }
+  };
+
+  const handleBankerChange = (bankerId: string) => {
     handleHoleSetupChange(currentHole, bankerId, currentHoleSetup.dots);
   };
 
@@ -435,38 +474,41 @@ export const BankerGame: React.FC<BankerGameProps> = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {players.map((player) => (
-                  <TableRow key={player.id}>
-                    <TableCell>
-                      {player.name}
-                      {currentHoleSetup.doubles[player.id] && (
-                        <Typography component="span" color="primary" sx={{ ml: 1 }}>
-                          (Double)
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      {scores[player.id]?.[currentHole] || '-'}
-                    </TableCell>
-                    <TableCell 
-                      align="right"
-                      sx={{
+                {players.map((player) => {
+                  const points = calculateHolePoints(player.id);
+                  const isBanker = player.id === currentHoleSetup.bankerId;
+
+                  return (
+                    <TableRow key={player.id}>
+                      <TableCell>
+                        {player.name}
+                        {currentHoleSetup.doubles[player.id] && (
+                          <Typography component="span" color="primary" sx={{ ml: 1 }}>
+                            (Double)
+                          </Typography>
+                        )}
+                        {isBanker && (
+                          <Typography component="span" color="secondary" sx={{ ml: 1 }}>
+                            (Banker)
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="center">
+                        {scores[player.id]?.[currentHole] || '-'}
+                      </TableCell>
+                      <TableCell align="right" sx={{
                         color: (theme) => {
-                          const points = calculateHolePoints(player.id);
                           if (points > 0) return theme.palette.success.main;
                           if (points < 0) return theme.palette.error.main;
                           return theme.palette.text.primary;
                         },
                         fontWeight: 'bold'
-                      }}
-                    >
-                      {(() => {
-                        const points = calculateHolePoints(player.id);
-                        return points === 0 ? '-' : points > 0 ? `+${points}` : points;
-                      })()}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      }}>
+                        {points === 0 ? '-' : points > 0 ? `+${points}` : points}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableContainer>

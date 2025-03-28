@@ -41,7 +41,7 @@ export const defaultGameOptions: GameOptions = {
 };
 
 export interface HoleSetup {
-  bankerId: string | null;
+  bankerId: string;
   dots: number;
   doubles: { [key: string]: boolean };
 }

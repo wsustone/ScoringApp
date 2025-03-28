@@ -14,12 +14,6 @@ const holes = [
   { id: 'hole2', number: 2, par: 3 },
 ];
 
-const emptyHoleSetup: HoleSetup = {
-  bankerId: undefined,
-  dots: 1,
-  doubles: {}
-};
-
 // Mock game options
 vi.mock('react', async () => {
   const actual = await vi.importActual('react');
@@ -28,38 +22,6 @@ vi.mock('react', async () => {
     useState: vi.fn().mockImplementation((init) => [init, vi.fn()]),
   };
 });
-
-// Mock mutation for testing
-const mocks = [
-  {
-    request: {
-      query: UPDATE_ROUND,
-      variables: {
-        input: {
-          id: 'test-round',
-          scores: [],
-          bankerSetups: [],
-          bankerDoubles: [],
-          gameOptions: {
-            minDots: 1,
-            maxDots: 3,
-            dotValue: 0.25,
-            doubleBirdieBets: false,
-            useGrossBirdies: true,
-            par3Triples: true
-          }
-        }
-      }
-    },
-    result: {
-      data: {
-        updateRound: {
-          id: 'test-round'
-        }
-      }
-    }
-  }
-];
 
 describe('BankerGame Points Calculation', () => {
   describe('Basic Scoring Rules', () => {

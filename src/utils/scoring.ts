@@ -1,16 +1,27 @@
+// Sort players for banker calculations - non-bankers first
+export const sortPlayersForBankerCalc = (players: { id: string }[], bankerId: string | null): { id: string }[] => {
+  if (!bankerId) return players;
+  return [...players].sort((a, b) => {
+    if (a.id === bankerId) return 1;
+    if (b.id === bankerId) return -1;
+    return 0;
+  });
+};
+
 export const calculatePoints = (
-  playerScore: number,
-  bankerScore: number,
+  playerScore: number | null,
+  bankerScore: number | null,
   holePar: number,
   dots: number,
   isPlayerDoubled: boolean,
   isBankerDoubled: boolean,
+  doubleBirdieBets: boolean,
   useGrossBirdies: boolean,
   isPar3: boolean,
-  par3Triples: boolean,
-  doubleBirdieBets: boolean
+  par3Triples: boolean
 ): number => {
-  if (playerScore === bankerScore) return 0; // Ties result in no points
+  if (playerScore === null || bankerScore === null) return 0;
+  if (playerScore === bankerScore) return 0;
 
   let multiplier = 1;
   
@@ -54,6 +65,6 @@ export const calculatePoints = (
   // Calculate base points (dots) and determine winner
   const points = dots * multiplier;
   
-  // Return positive points if player wins, negative if banker wins
+  // Return positive points if player wins (lower score), negative if banker wins
   return playerScore < bankerScore ? points : -points;
 };
