@@ -146,7 +146,7 @@ export const BankerGame: React.FC<BankerGameProps> = ({
       [holeNumber]: {
         bankerId,
         dots,
-        doubles: {}
+        doubles: prev[holeNumber]?.doubles || {}
       }
     }));
   };
@@ -158,7 +158,8 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   };
 
   const sortPlayersForBankerCalc = (players: Player[], bankerId: string) => {
-    return players.sort((a, b) => {
+    // Create a copy of players array to avoid modifying the original
+    return [...players].sort((a, b) => {
       if (a.id === bankerId) return 1;
       if (b.id === bankerId) return -1;
       return 0;
@@ -166,12 +167,16 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   };
 
   const calculateHolePoints = (playerId: string): number => {
-    if (!currentHoleSetup.bankerId || !scores[playerId]?.[currentHole]) return 0;
+    // Return 0 if no banker is set or if player has no scores
+    if (!currentHoleSetup.bankerId || !scores[playerId]) return 0;
 
+    // Create a temporary sorted array just for calculations
     const sortedPlayers = sortPlayersForBankerCalc(players, currentHoleSetup.bankerId);
     
     if (playerId === currentHoleSetup.bankerId) {
       return sortedPlayers.reduce((total, player) => {
+        // Skip calculation if player has no scores
+        if (!scores[player.id]) return total;
         if (player.id === currentHoleSetup.bankerId) return total;
         
         const playerScore = scores[player.id]?.[currentHole] ?? null;
@@ -196,6 +201,9 @@ export const BankerGame: React.FC<BankerGameProps> = ({
         return total - points; // Negate points since this is banker's perspective
       }, 0);
     } else {
+      // Skip calculation if banker has no scores
+      if (!scores[currentHoleSetup.bankerId]) return 0;
+      
       const playerScore = scores[playerId]?.[currentHole] ?? null;
       const bankerScore = scores[currentHoleSetup.bankerId]?.[currentHole] ?? null;
       const holePar = holes.find(h => h.number === currentHole)?.par || 0;
@@ -477,21 +485,20 @@ export const BankerGame: React.FC<BankerGameProps> = ({
                 {players.map((player) => {
                   const points = calculateHolePoints(player.id);
                   const isBanker = player.id === currentHoleSetup.bankerId;
+                  const isDoubled = currentHoleSetup.doubles[player.id];
 
                   return (
                     <TableRow key={player.id}>
                       <TableCell>
-                        {player.name}
-                        {currentHoleSetup.doubles[player.id] && (
-                          <Typography component="span" color="primary" sx={{ ml: 1 }}>
-                            (Double)
-                          </Typography>
-                        )}
-                        {isBanker && (
-                          <Typography component="span" color="secondary" sx={{ ml: 1 }}>
-                            (Banker)
-                          </Typography>
-                        )}
+                        <Typography
+                          component="span"
+                          sx={{
+                            fontWeight: isBanker ? 'bold' : 'normal',
+                            color: isDoubled ? 'primary.main' : 'inherit'
+                          }}
+                        >
+                          {player.name}
+                        </Typography>
                       </TableCell>
                       <TableCell align="center">
                         {scores[player.id]?.[currentHole] || '-'}
