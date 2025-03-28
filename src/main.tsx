@@ -7,6 +7,7 @@ import App from './App';
 import { GamePage } from './pages/GamePage';
 import { CourseList } from './components/CourseList';
 import { CourseDetail } from './components/CourseDetail';
+import { ActiveRounds } from './components/ActiveRounds';
 import './index.css';
 
 const router = createBrowserRouter([
@@ -16,7 +17,7 @@ const router = createBrowserRouter([
     children: [
       {
         path: '/',
-        element: <GamePage />,
+        element: <ActiveRounds />,
       },
       {
         path: 'courses',
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       {
         path: 'course/:id',
         element: <CourseDetail />,
+      },
+      {
+        path: 'round/:id',
+        element: <GamePage />,
       },
     ],
   },

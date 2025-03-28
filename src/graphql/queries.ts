@@ -109,11 +109,11 @@ export const GET_ACTIVE_ROUNDS = gql`
   query GetActiveRounds {
     getActiveRounds {
       id
-      startTime
       courseName
-      status
+      startTime
       players {
         playerName
+        handicap
       }
     }
   }

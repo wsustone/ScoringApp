@@ -22,6 +22,8 @@ interface GameProps {
   onCurrentHoleChange: (hole: number) => void;
   gameType: GameType;
   onGameTypeChange: (type: GameType) => void;
+  onScoreChange: (playerId: string, hole: number, score: number | null) => void;
+  roundId: string | undefined;
 }
 
 export const Game: React.FC<GameProps> = ({
@@ -31,7 +33,9 @@ export const Game: React.FC<GameProps> = ({
   currentHole,
   onCurrentHoleChange,
   gameType,
-  onGameTypeChange
+  onGameTypeChange,
+  onScoreChange,
+  roundId
 }: GameProps) => {
   const handleGameTypeChange = (event: SelectChangeEvent) => {
     const value = event.target.value;
@@ -51,8 +55,8 @@ export const Game: React.FC<GameProps> = ({
                 <InputLabel>Game Type</InputLabel>
                 <Select
                   value={gameType}
-                  onChange={handleGameTypeChange}
                   label="Game Type"
+                  onChange={handleGameTypeChange}
                 >
                   <MenuItem value="banker">Banker</MenuItem>
                   <MenuItem value="mrpar">Mr. Par</MenuItem>
@@ -62,18 +66,21 @@ export const Game: React.FC<GameProps> = ({
             </Paper>
           </Grid>
 
-          {/* Game Type Specific Component */}
-          {gameType === 'banker' && (
-            <Grid item xs={12}>
+          {/* Game Component */}
+          <Grid item xs={12}>
+            {gameType === 'banker' && (
               <BankerGame
                 players={players}
                 scores={scores}
                 holes={holes}
                 currentHole={currentHole}
                 onCurrentHoleChange={onCurrentHoleChange}
+                roundId={roundId}
+                onScoreChange={onScoreChange}
               />
-            </Grid>
-          )}
+            )}
+            {/* Add other game type components here */}
+          </Grid>
         </Grid>
       </Box>
     </Container>

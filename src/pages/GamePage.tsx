@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@apollo/client';
+import { useParams } from 'react-router-dom';
 import { Game } from '../components/Game';
 import { Player, PlayerForm } from '../components/PlayerForm';
 import { GameType, GolfHole } from '../types/game';
@@ -8,6 +9,7 @@ import { Scorecard } from '../components/Scorecard';
 import { GET_COURSE_HOLES } from '../graphql/queries';
 
 export const GamePage = () => {
+  const { id: roundId } = useParams<{ id: string }>();
   const [players, setPlayers] = useState<Player[]>([]);
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>({});
   const [selectedCourseId, setSelectedCourseId] = useState('');
@@ -101,6 +103,7 @@ export const GamePage = () => {
           gameType={gameType}
           onGameTypeChange={setGameType}
           onScoreChange={handleScoreChange}
+          roundId={roundId}
         />
       )}
     </Box>

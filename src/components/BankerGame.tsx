@@ -36,6 +36,8 @@ interface BankerGameProps {
   holes: { id: string; number: number; par: number }[];
   currentHole: number;
   onCurrentHoleChange: (hole: number) => void;
+  roundId: string | undefined;
+  onScoreChange: (playerId: string, hole: number, score: number | null) => void;
 }
 
 export const BankerGame: React.FC<BankerGameProps> = ({ 
@@ -44,6 +46,8 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   holes,
   currentHole,
   onCurrentHoleChange,
+  roundId,
+  onScoreChange,
 }: BankerGameProps) => {
   const [gameOptions, setGameOptions] = useState<GameOptions>(defaultGameOptions);
   const [holeSetups, setHoleSetups] = useState<{ [key: number]: HoleSetup }>({});
@@ -64,10 +68,11 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   });
 
   useEffect(() => {
-    if (holeSetups && Object.keys(holeSetups).length > 0 && scores) {
+    if (roundId && holeSetups && Object.keys(holeSetups).length > 0 && scores) {
       updateRound({
         variables: {
           input: {
+            id: roundId,
             scores: Object.entries(scores).flatMap(([playerId, holeScores]) =>
               Object.entries(holeScores).map(([holeNumber, score]) => ({
                 playerId,
@@ -94,7 +99,7 @@ export const BankerGame: React.FC<BankerGameProps> = ({
         }
       });
     }
-  }, [scores, holeSetups, gameOptions]);
+  }, [scores, holeSetups, gameOptions, roundId]);
 
   const handleHoleSetupChange = (holeNumber: number, bankerId: string, dots: number) => {
     setHoleSetups(prev => ({
