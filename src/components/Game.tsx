@@ -73,6 +73,7 @@ export const Game: React.FC<GameProps> = ({
               currentHole={currentHole}
               onCurrentHoleChange={onCurrentHoleChange}
               onScoreChange={onScoreChange}
+              courseName={''} // Added courseName prop
             />
           )}
         </Grid>

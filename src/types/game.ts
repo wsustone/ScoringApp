@@ -1,5 +1,5 @@
 export interface GolfHole {
-  id?: string;
+  id: string;
   number: number;
   par: number;
   strokeIndex: number;
@@ -23,21 +23,25 @@ export interface GolfCourse {
 }
 
 export interface GameOptions {
-  doubleBirdieBets: boolean;
   minDots: number;
   maxDots: number;
   dotValue: number;
+  doubleBirdieBets: boolean;
+  useGrossBirdies: boolean;
+  par3Triples: boolean;
 }
 
 export const defaultGameOptions: GameOptions = {
-  doubleBirdieBets: false,
   minDots: 1,
-  maxDots: 1,
-  dotValue: 1
+  maxDots: 3,
+  dotValue: 0.25,
+  doubleBirdieBets: false,
+  useGrossBirdies: true,
+  par3Triples: true
 };
 
 export interface HoleSetup {
-  banker: string | undefined;
+  bankerId: string | null;
   dots: number;
   doubles: { [key: string]: boolean };
 }
