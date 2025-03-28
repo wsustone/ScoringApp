@@ -71,7 +71,6 @@ export const Game: React.FC<GameProps> = ({
                 holes={holes}
                 currentHole={currentHole}
                 onCurrentHoleChange={onCurrentHoleChange}
-                courseName={''}
               />
             </Grid>
           )}

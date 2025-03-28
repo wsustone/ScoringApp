@@ -27,7 +27,7 @@ import {
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { Player } from '../types/player';
 import { GameOptions, HoleSetup, defaultGameOptions } from '../types/game';
-import { START_ROUND, UPDATE_ROUND } from '../graphql/mutations';
+import { UPDATE_ROUND } from '../graphql/mutations';
 import { calculatePoints } from '../utils/scoring';
 
 interface BankerGameProps {
@@ -36,7 +36,6 @@ interface BankerGameProps {
   holes: { id: string; number: number; par: number }[];
   currentHole: number;
   onCurrentHoleChange: (hole: number) => void;
-  courseName: string;
 }
 
 export const BankerGame: React.FC<BankerGameProps> = ({ 
@@ -45,13 +44,10 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   holes,
   currentHole,
   onCurrentHoleChange,
-  courseName
 }: BankerGameProps) => {
   const [gameOptions, setGameOptions] = useState<GameOptions>(defaultGameOptions);
   const [holeSetups, setHoleSetups] = useState<{ [key: number]: HoleSetup }>({});
   const [showGameOptions, setShowGameOptions] = useState(false);
-  const [roundStarted, setRoundStarted] = useState(false);
-  const [roundId, setRoundId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleError = (error: ApolloError) => {
@@ -63,55 +59,15 @@ export const BankerGame: React.FC<BankerGameProps> = ({
     setError(message);
   };
 
-  const [startRound] = useMutation(START_ROUND, {
-    onError: handleError
-  });
-
   const [updateRound] = useMutation(UPDATE_ROUND, {
     onError: handleError
   });
 
-  const handleStartRound = async () => {
-    try {
-      const { data } = await startRound({
-        variables: {
-          courseName,
-          players: players.map(p => ({
-            id: p.id,
-            name: p.name,
-            handicap: p.handicap || 0,
-            teeId: p.teeId
-          })),
-          holes: holes.map(h => ({
-            number: h.number,
-            par: h.par
-          })),
-          gameOptions: {
-            minDots: gameOptions.minDots,
-            maxDots: gameOptions.maxDots,
-            dotValue: gameOptions.dotValue,
-            doubleBirdieBets: gameOptions.doubleBirdieBets,
-            useGrossBirdies: gameOptions.useGrossBirdies,
-            par3Triples: gameOptions.par3Triples
-          }
-        }
-      });
-
-      if (data?.startRound) {
-        setRoundId(data.startRound);
-        setRoundStarted(true);
-      }
-    } catch (error) {
-      // Error will be handled by onError callback
-    }
-  };
-
   useEffect(() => {
-    if (roundStarted && roundId) {
+    if (holeSetups && Object.keys(holeSetups).length > 0 && scores) {
       updateRound({
         variables: {
           input: {
-            id: roundId,
             scores: Object.entries(scores).flatMap(([playerId, holeScores]) =>
               Object.entries(holeScores).map(([holeNumber, score]) => ({
                 playerId,
@@ -138,7 +94,7 @@ export const BankerGame: React.FC<BankerGameProps> = ({
         }
       });
     }
-  }, [scores, holeSetups, gameOptions, roundStarted, roundId]);
+  }, [scores, holeSetups, gameOptions]);
 
   const handleHoleSetupChange = (holeNumber: number, bankerId: string, dots: number) => {
     setHoleSetups(prev => ({
@@ -251,19 +207,7 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   };
 
   const renderStartRoundButton = () => {
-    if (roundStarted) return null;
-    return (
-      <Box mt={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={handleStartRound}
-          disabled={players.length < 3}
-        >
-          Start Round
-        </Button>
-      </Box>
-    );
+    return null;
   };
 
   return (

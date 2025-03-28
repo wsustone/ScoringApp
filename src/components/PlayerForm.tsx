@@ -12,11 +12,15 @@ import {
   FormControl,
   InputLabel,
   CircularProgress,
+  List,
+  ListItem,
+  ListItemText,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-import { useQuery } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client';
 import { GET_GOLF_COURSES } from '../graphql/queries';
+import { START_ROUND } from '../graphql/mutations';
 
 export interface Player {
   id: string;
@@ -39,7 +43,26 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   onCourseChange 
 }) => {
   const [error, setError] = useState<string | null>(null);
+  const [startedRounds, setStartedRounds] = useState<Array<{id: string, courseName: string, date: string}>>([]);
   const { loading, error: courseError, data } = useQuery(GET_GOLF_COURSES);
+  
+  const [startRound] = useMutation(START_ROUND, {
+    onCompleted: (data) => {
+      const roundId = data.startRound;
+      const selectedCourse = data.golfCourses.find((c: { id: string; name: string }) => c.id === selectedCourseId);
+      setStartedRounds(prev => [
+        ...prev,
+        {
+          id: roundId,
+          courseName: selectedCourse?.name || 'Unknown Course',
+          date: new Date().toLocaleDateString()
+        }
+      ]);
+    },
+    onError: (error) => {
+      setError(error.message);
+    }
+  });
 
   const handleAddPlayer = () => {
     if (players.length >= 4) {
@@ -51,7 +74,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       id: Date.now().toString(),
       name: '',
       handicap: 0,
-      teeId: selectedCourse?.tees?.[0]?.id || '' // Set default tee to first available tee
+      teeId: selectedCourse?.tees?.[0]?.id || ''
     };
     
     onPlayersChange([...players, newPlayer]);
@@ -71,6 +94,48 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     );
   };
 
+  const handleStartRound = async () => {
+    if (!selectedCourseId) {
+      setError('Please select a course');
+      return;
+    }
+
+    if (players.length === 0) {
+      setError('Please add at least one player');
+      return;
+    }
+
+    if (players.some(p => !p.name)) {
+      setError('All players must have names');
+      return;
+    }
+
+    try {
+      await startRound({
+        variables: {
+          courseName: selectedCourse?.name || '',
+          players: players.map(p => ({
+            id: p.id,
+            name: p.name,
+            handicap: p.handicap,
+            teeId: p.teeId
+          })),
+          holes: selectedCourse?.tees?.[0]?.holes || [],
+          gameOptions: {
+            minDots: 1,
+            maxDots: 3,
+            dotValue: 0.25,
+            doubleBirdieBets: false,
+            useGrossBirdies: true,
+            par3Triples: true
+          }
+        }
+      });
+    } catch (error) {
+      // Error will be handled by onError callback
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
@@ -87,10 +152,8 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     );
   }
 
-  // Find the selected course from the data
-  const selectedCourse = data?.golfCourses?.find(
-    (course: any) => course.id === selectedCourseId
-  );
+  const courses = data?.golfCourses || [];
+  const selectedCourse = courses.find(course => course.id === selectedCourseId);
 
   return (
     <Box sx={{ width: '100%', mt: 2 }}>
@@ -100,107 +163,104 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         </Alert>
       )}
 
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Typography variant="h6" gutterBottom>
+          Course Selection
+        </Typography>
+        <FormControl fullWidth sx={{ mb: 2 }}>
           <InputLabel>Select Course</InputLabel>
           <Select
             value={selectedCourseId}
             onChange={(e) => onCourseChange(e.target.value)}
             label="Select Course"
           >
-            {data?.golfCourses?.map((course: any) => (
+            {courses.map((course: { id: string; name: string }) => (
               <MenuItem key={course.id} value={course.id}>
                 {course.name}
               </MenuItem>
             ))}
           </Select>
         </FormControl>
-      </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h6">Players</Typography>
+        <Typography variant="h6" gutterBottom>
+          Players
+        </Typography>
+        {players.map((player, index) => (
+          <Box key={player.id} sx={{ mb: 2, display: 'flex', gap: 2 }}>
+            <TextField
+              label={`Player ${index + 1} Name`}
+              value={player.name}
+              onChange={(e) => handlePlayerChange(player.id, 'name', e.target.value)}
+              fullWidth
+            />
+            <TextField
+              label="Handicap"
+              type="number"
+              value={player.handicap}
+              onChange={(e) => handlePlayerChange(player.id, 'handicap', parseInt(e.target.value) || 0)}
+              sx={{ width: 100 }}
+            />
+            {selectedCourse && (
+              <FormControl sx={{ minWidth: 120 }}>
+                <InputLabel>Tee</InputLabel>
+                <Select
+                  value={player.teeId}
+                  onChange={(e) => handlePlayerChange(player.id, 'teeId', e.target.value)}
+                  label="Tee"
+                >
+                  {selectedCourse.tees?.map((tee: any) => (
+                    <MenuItem key={tee.id} value={tee.id}>
+                      {tee.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            )}
+            <IconButton onClick={() => handleRemovePlayer(player.id)} color="error">
+              <DeleteIcon />
+            </IconButton>
+          </Box>
+        ))}
         <Button
-          variant="contained"
-          color="primary"
           startIcon={<AddIcon />}
           onClick={handleAddPlayer}
-          disabled={players.length >= 4 || !selectedCourseId}
+          variant="outlined"
+          sx={{ mt: 1 }}
         >
           Add Player
         </Button>
+      </Paper>
+
+      {/* Start Round Button */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleStartRound}
+          disabled={!selectedCourseId || players.length === 0 || players.some(p => !p.name)}
+        >
+          Start Round
+        </Button>
       </Box>
 
-      {!selectedCourseId && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Please select a course first
-        </Alert>
+      {/* Started Rounds List */}
+      {startedRounds.length > 0 && (
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Started Rounds
+          </Typography>
+          <List>
+            {startedRounds.map((round) => (
+              <ListItem key={round.id}>
+                <ListItemText
+                  primary={round.courseName}
+                  secondary={`Started on ${round.date}`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
       )}
-
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {players.map((player) => (
-          <Paper key={player.id} sx={{ p: 2 }}>
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 2, 
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              '& > *': { 
-                minWidth: { xs: '100%', sm: 'auto' } 
-              },
-              '& > .MuiFormControl-root': {
-                flex: { xs: '1 1 100%', sm: 'auto' }
-              }
-            }}>
-              <TextField
-                label="Name"
-                value={player.name}
-                onChange={(e) => handlePlayerChange(player.id, 'name', e.target.value)}
-                sx={{ flex: { xs: '1 1 100%', sm: 2 } }}
-              />
-              {selectedCourse?.tees && (
-                <FormControl sx={{ width: { xs: '100%', sm: '180px' } }}>
-                  <InputLabel>Tee</InputLabel>
-                  <Select
-                    value={player.teeId}
-                    onChange={(e) => handlePlayerChange(player.id, 'teeId', e.target.value)}
-                    label="Tee"
-                  >
-                    {selectedCourse.tees.map((tee: any) => (
-                      <MenuItem key={tee.id} value={tee.id}>
-                        {tee.name} ({tee.gender})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-              <TextField
-                label="Handicap"
-                type="number"
-                value={player.handicap}
-                onChange={(e) => handlePlayerChange(player.id, 'handicap', parseInt(e.target.value) || 0)}
-                inputProps={{
-                  min: 0,
-                  max: 54,
-                  step: 1
-                }}
-                sx={{ width: { xs: '100%', sm: '120px' } }}
-              />
-              <IconButton
-                color="error"
-                onClick={() => handleRemovePlayer(player.id)}
-                sx={{ 
-                  ml: { xs: 0, sm: 'auto' },
-                  width: 'auto !important',
-                  flex: '0 0 auto !important'
-                }}
-                disabled={players.length <= 1}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          </Paper>
-        ))}
-      </Box>
     </Box>
   );
 };
