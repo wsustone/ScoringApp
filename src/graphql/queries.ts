@@ -40,3 +40,18 @@ export const GET_GOLF_COURSE = gql`
     }
   }
 `;
+
+export const GET_COURSE_HOLES = gql`
+  query GetCourseHoles($courseId: ID!) {
+    golfCourse(id: $courseId) {
+      id
+      tees {
+        holes {
+          number
+          par
+          strokeIndex
+        }
+      }
+    }
+  }
+`;

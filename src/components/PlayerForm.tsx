@@ -178,6 +178,11 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
                 type="number"
                 value={player.handicap}
                 onChange={(e) => handlePlayerChange(player.id, 'handicap', parseInt(e.target.value) || 0)}
+                inputProps={{
+                  min: 0,
+                  max: 54,
+                  step: 1
+                }}
                 sx={{ width: { xs: '100%', sm: '120px' } }}
               />
               <IconButton

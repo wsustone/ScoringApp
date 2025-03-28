@@ -24,7 +24,17 @@ export interface GolfCourse {
 
 export interface GameOptions {
   doubleBirdieBets: boolean;
+  minDots: number;
+  maxDots: number;
+  dotValue: number;
 }
+
+export const defaultGameOptions: GameOptions = {
+  doubleBirdieBets: false,
+  minDots: 1,
+  maxDots: 1,
+  dotValue: 1
+};
 
 export interface HoleSetup {
   banker: string | undefined;

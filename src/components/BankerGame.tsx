@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Box, 
   Typography, 
@@ -10,21 +10,21 @@ import {
   MenuItem, 
   TextField, 
   Button,
-  Stack,
   SelectChangeEvent,
-  Tooltip,
   Checkbox,
-  IconButton,
   Collapse,
-  Input
+  FormControlLabel,
+  Stack,
+  TableContainer,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody
 } from '@mui/material';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 import { Player } from './PlayerForm';
-import { HoleSetup } from '../types/game';
-
-interface GameOptions {
-  doubleBirdieBets: boolean;
-}
+import { HoleSetup, GameOptions, defaultGameOptions } from '../types/game';
 
 interface BankerGameProps {
   players: Player[];
@@ -35,69 +35,47 @@ interface BankerGameProps {
   onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
 }
 
-const emptyHoleSetup: HoleSetup = {
-  banker: undefined,
-  dots: 0,
-  doubles: {}
-};
-
 export const calculatePoints = (
   playerScore: number,
   bankerScore: number,
   holePar: number,
-  baseDots: number,
-  playerDoubled: boolean,
-  bankerDoubled: boolean,
-  doubleBirdieBets: boolean,
-  isBanker: boolean
-) => {
-  const diff = playerScore - bankerScore;
+  dots: number,
+  isPlayerDoubled: boolean,
+  isBankerDoubled: boolean,
+  useGrossBirdies: boolean,
+  isPar3: boolean
+): number => {
+  if (playerScore === bankerScore) return 0; // Ties result in no points
+
+  let multiplier = 1;
   
-  if (diff === 0) {
-    return { points: 0, isPositive: true };
+  // Handle Par 3 triple bets
+  if (isPar3) {
+    if (isPlayerDoubled) multiplier *= 3;
+    if (isBankerDoubled) multiplier *= 3;
+  } else {
+    if (isPlayerDoubled) multiplier *= 2;
+    if (isBankerDoubled) multiplier *= 2;
   }
 
-  // Start with base dots
-  let dots = baseDots;
-
-  const tripleBet = holePar === 3;
-  // Apply banker's double first if they doubled
-  if (bankerDoubled) {
-    if(tripleBet){
-      dots *= 3;
-    }else{
-    dots *= 2;
-    }
+  // Handle gross birdies/eagles if enabled
+  if (useGrossBirdies) {
+    // Find the highest multiplier from all cases
+    const birdieEagleMultiplier = Math.max(
+      // Banker cases
+      bankerScore === holePar - 1 ? 2 : 1,  // Birdie
+      bankerScore <= holePar - 2 ? 4 : 1,   // Eagle or better
+      // Player cases
+      playerScore === holePar - 1 ? 2 : 1,  // Birdie
+      playerScore <= holePar - 2 ? 4 : 1    // Eagle or better
+    );
+    multiplier *= birdieEagleMultiplier;
   }
 
-  // Apply player's double if they doubled
-  if (playerDoubled) {
-    if(tripleBet){
-      dots *= 3;
-    }else{
-      dots *= 2;
-    }
-  }
-
-  // Check for birdies/eagles if enabled
-  if (doubleBirdieBets) {
-    let multiplier = 1;
-    if (playerScore === holePar - 1 || bankerScore === holePar - 1) { // Birdie
-      multiplier = 2;
-    }
-    if (playerScore === holePar - 2 || bankerScore === holePar - 2) { // Eagle
-      multiplier = 4;
-    }
-    dots *= multiplier;
-  }
-
-  if (isBanker) {
-    return { points: dots, isPositive: diff > 0 };
-  }
-  
-  return { points: dots, isPositive: diff < 0 };
+  const points = dots * multiplier;
+  // Points are positive if player wins, negative if banker wins
+  return playerScore < bankerScore ? points : -points;
 };
-
 
 export const BankerGame: React.FC<BankerGameProps> = ({ 
   players, 
@@ -106,60 +84,68 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   currentHole,
   onCurrentHoleChange,
   onScoreChange
-}) => {
+}: BankerGameProps) => {
+  const [gameOptions, setGameOptions] = useState<GameOptions>(defaultGameOptions);
   const [holeSetups, setHoleSetups] = useState<{ [key: number]: HoleSetup }>({});
-  const [doubleBirdieBets, setDoubleBirdieBets] = useState(false);
   const [dotsHistory, setDotsHistory] = useState<{ [key: string]: number }>({});
   const [dotsHistoryOpen, setDotsHistoryOpen] = useState(false);
+  const [showGameOptions, setShowGameOptions] = useState(false);
 
-  const calculateHolePoints = (
-    currentHole: number,
-    scores: { [key: string]: { [key: number]: number | null } },
-    holeSetup: HoleSetup,
-    holePar: number
-  ) => {
-    const bankerPoints: { [key: string]: number } = {};
-    const playerPoints: { [key: string]: number } = {};
-    
-    const bankerId = holeSetup.banker;
-    if (!bankerId) return { bankerPoints, playerPoints };
+  // Validation for minimum players
+  if (players.length < 3) {
+    return (
+      <Paper sx={{ p: 2 }}>
+        <Typography color="error" variant="h6" gutterBottom>
+          Banker Game requires at least 3 players
+        </Typography>
+        <Typography variant="body1">
+          Please add more players before starting the game.
+        </Typography>
+      </Paper>
+    );
+  }
+
+  const calculateHolePoints = (playerId: string): number => {
+    const bankerId = currentHoleSetup.banker;
+    if (!bankerId) return 0;
 
     const bankerScore = scores[bankerId][currentHole];
-    if (bankerScore === null) return { bankerPoints, playerPoints };
+    if (bankerScore === null) return 0;
 
-    // Calculate points for each player against the banker individually
-    players.forEach(player => {
-      if (player.id === bankerId) return; // Skip banker
+    const playerScore = scores[playerId][currentHole];
+    if (playerScore === null) return 0;
 
-      const playerScore = scores[player.id][currentHole];
-      if (playerScore === null) return;
+    const holePar = holes.find(h => h.number === currentHole)?.par || 0;
+    const points = calculatePoints(
+      playerScore,
+      bankerScore,
+      holePar,
+      currentHoleSetup.dots || 0,
+      Boolean(currentHoleSetup.doubles?.[playerId]),
+      Boolean(currentHoleSetup.doubles?.[bankerId]),
+      gameOptions.doubleBirdieBets,
+      holePar === 3
+    );
 
-      const isPlayerDoubled = Boolean(holeSetup.doubles?.[player.id]);
-      const isBankerDoubled = Boolean(holeSetup.doubles?.[bankerId]);
-
-      // Calculate player's points vs banker
-      const playerResult = calculatePoints(
-        playerScore,
-        bankerScore,
-        holePar,
-        holeSetup.dots,
-        isPlayerDoubled,
-        isBankerDoubled,
-        doubleBirdieBets,
-        false
-      );
-
-      // Store points for player
-      playerPoints[player.id] = playerResult.isPositive ? playerResult.points : -playerResult.points;
-
-      // Add corresponding points for banker (opposite of player's points)
-      bankerPoints[player.id] = -playerPoints[player.id];
-    });
-
-    return { bankerPoints, playerPoints };
+    // For banker, invert the points since they win when others lose
+    return playerId === bankerId ? -points : points;
   };
 
+  // Create empty hole setup with minDots
+  const emptyHoleSetup = useMemo(() => ({
+    banker: undefined,
+    dots: gameOptions.minDots,
+    doubles: {}
+  }), [gameOptions.minDots]);
+
+  const currentHoleSetup = useMemo(() => {
+    return holeSetups[currentHole] || { ...emptyHoleSetup };
+  }, [holeSetups, currentHole, emptyHoleSetup]);
+
   const updateHoleSetup = (hole: number, setup: HoleSetup) => {
+    // Ensure dots is within min/max range
+    setup.dots = Math.max(gameOptions.minDots, Math.min(gameOptions.maxDots, setup.dots || gameOptions.minDots));
+    
     const newHoleSetups = { ...holeSetups, [hole]: setup };
     setHoleSetups(newHoleSetups);
 
@@ -168,62 +154,37 @@ export const BankerGame: React.FC<BankerGameProps> = ({
     if (holePar === 0) return;
 
     // Calculate points for the hole
-    const { bankerPoints, playerPoints } = calculateHolePoints(hole, scores, setup, holePar);
+    const bankerId = setup.banker;
+    if (!bankerId) return;
 
     // Update the dots history
     const newDotsHistory = { ...dotsHistory };
-    if (setup.banker) {
-      // Update banker's total
-      const bankerTotal = Object.values(bankerPoints).reduce((sum, points) => sum + points, 0);
-      newDotsHistory[setup.banker] = (newDotsHistory[setup.banker] || 0) + bankerTotal;
-
-      // Update each player's total
-      players.forEach(player => {
-        if (player.id !== setup.banker && playerPoints[player.id] !== undefined) {
-          newDotsHistory[player.id] = (newDotsHistory[player.id] || 0) + playerPoints[player.id];
-        }
-      });
-    }
-
+    players.forEach(player => {
+      if (player.id !== bankerId && scores[player.id][hole] !== null) {
+        newDotsHistory[player.id] = (newDotsHistory[player.id] || 0) + calculateHolePoints(player.id);
+      }
+    });
+    newDotsHistory[bankerId] = (newDotsHistory[bankerId] || 0) + calculateHolePoints(bankerId);
     setDotsHistory(newDotsHistory);
   };
 
-  // Load saved game options
-  useEffect(() => {
-    const savedOptions = localStorage.getItem('bankerGameOptions');
-    if (savedOptions) {
-      const options = JSON.parse(savedOptions);
-      setDoubleBirdieBets(options.doubleBirdieBets);
-    }
-  }, []);
+  const handleGameOptionsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type, checked } = event.target;
+    setGameOptions(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : Number(value)
+    }));
+  };
 
-  // Save game options
-  useEffect(() => {
-    localStorage.setItem('bankerGameOptions', JSON.stringify({ doubleBirdieBets }));
-  }, [doubleBirdieBets]);
+  const handleDotsChange = (dots: number) => {
+    if (dots < gameOptions.minDots) dots = gameOptions.minDots;
+    if (dots > gameOptions.maxDots) dots = gameOptions.maxDots;
 
-  // Initialize hole setup if not present
-  useEffect(() => {
-    if (!holeSetups[currentHole]) {
-      setHoleSetups(prev => ({
-        ...prev,
-        [currentHole]: { ...emptyHoleSetup }
-      }));
-    }
-  }, [currentHole, holeSetups]);
-
-  const currentHoleSetup = holeSetups[currentHole] || { ...emptyHoleSetup };
-
-  const handleHoleChange = (event: SelectChangeEvent<number>) => {
-    onCurrentHoleChange(Number(event.target.value));
+    updateHoleSetup(currentHole, { ...currentHoleSetup, dots });
   };
 
   const handleBankerChange = (bankerId: string | undefined) => {
     updateHoleSetup(currentHole, { ...currentHoleSetup, banker: bankerId });
-  };
-
-  const handleDotsChange = (dots: number) => {
-    updateHoleSetup(currentHole, { ...currentHoleSetup, dots });
   };
 
   const handleDoubleChange = (playerId: string, isDouble: boolean) => {
@@ -236,230 +197,387 @@ export const BankerGame: React.FC<BankerGameProps> = ({
     });
   };
 
-  const handleGameOptionsChange = (options: Partial<GameOptions>) => {
-    if (typeof options.doubleBirdieBets === 'boolean') {
-      setDoubleBirdieBets(options.doubleBirdieBets);
+  // Load saved game state
+  useEffect(() => {
+    const savedOptions = localStorage.getItem('bankerGameOptions');
+    if (savedOptions) {
+      const options = JSON.parse(savedOptions);
+      setGameOptions(options);
     }
+
+    const savedHoleSetups = localStorage.getItem('bankerGameHoleSetups');
+    if (savedHoleSetups) {
+      setHoleSetups(JSON.parse(savedHoleSetups));
+    }
+
+    const savedDotsHistory = localStorage.getItem('bankerGameDotsHistory');
+    if (savedDotsHistory) {
+      setDotsHistory(JSON.parse(savedDotsHistory));
+    }
+  }, []);
+
+  // Save game state
+  useEffect(() => {
+    localStorage.setItem('bankerGameOptions', JSON.stringify(gameOptions));
+  }, [gameOptions]);
+
+  useEffect(() => {
+    localStorage.setItem('bankerGameHoleSetups', JSON.stringify(holeSetups));
+  }, [holeSetups]);
+
+  useEffect(() => {
+    localStorage.setItem('bankerGameDotsHistory', JSON.stringify(dotsHistory));
+  }, [dotsHistory]);
+
+  // Initialize hole setup if not present
+  useEffect(() => {
+    if (!holeSetups[currentHole]) {
+      setHoleSetups(prev => ({
+        ...prev,
+        [currentHole]: { ...emptyHoleSetup }
+      }));
+    }
+  }, [currentHole, holeSetups]);
+
+  // Update hole setups when gameOptions.minDots changes
+  useEffect(() => {
+    setHoleSetups(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(hole => {
+        const holeNum = parseInt(hole);
+        if (!updated[holeNum].dots || updated[holeNum].dots < gameOptions.minDots) {
+          updated[holeNum] = {
+            ...updated[holeNum],
+            dots: gameOptions.minDots
+          };
+        }
+      });
+      return updated;
+    });
+  }, [gameOptions.minDots]);
+
+  const handleHoleChange = (event: SelectChangeEvent<number>) => {
+    const newHole = Number(event.target.value);
+    onCurrentHoleChange(newHole);
   };
 
   return (
     <Box>
       {/* Game Options */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="h6" gutterBottom>Game Options</Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Tooltip title="When enabled, gross birdies (1 under par) double the bet and eagles (2 under par) quadruple the bet. These multiply with other doubles." placement="right">
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Checkbox
-                checked={doubleBirdieBets}
-                onChange={(e) => handleGameOptionsChange({ doubleBirdieBets: e.target.checked })}
-              />
-              <Typography>Double Birdie / Quad Eagle</Typography>
-            </Box>
-          </Tooltip>
+      <Paper sx={{ p: 2, mb: 2 }}>
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            mb: 2,
+            width: '100%'
+          }}
+        >
+          <Typography variant="h6" sx={{ mr: 2 }}>Game Options</Typography>
+          <Button
+            onClick={() => setShowGameOptions(!showGameOptions)}
+            endIcon={showGameOptions ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+            sx={{ 
+              minWidth: { xs: 'auto', sm: 120 },
+              whiteSpace: 'nowrap'
+            }}
+            size="small"
+          >
+            {showGameOptions ? 'Hide' : 'Show'}
+          </Button>
         </Box>
+        <Collapse in={showGameOptions}>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={gameOptions.doubleBirdieBets}
+                    onChange={handleGameOptionsChange}
+                    name="doubleBirdieBets"
+                    size="small"
+                  />
+                }
+                label={
+                  <Typography variant="body2">
+                    Double Birdie Bets
+                  </Typography>
+                }
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Minimum Dots"
+                    name="minDots"
+                    value={gameOptions.minDots}
+                    onChange={handleGameOptionsChange}
+                    inputProps={{ min: 1 }}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Maximum Dots"
+                    name="maxDots"
+                    value={gameOptions.maxDots}
+                    onChange={handleGameOptionsChange}
+                    inputProps={{ min: gameOptions.minDots }}
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Dot Value ($)"
+                    name="dotValue"
+                    value={gameOptions.dotValue}
+                    onChange={handleGameOptionsChange}
+                    inputProps={{ min: 0.01, step: 0.01 }}
+                    size="small"
+                  />
+                </Grid>
+              </Grid>
+            </Grid>
+          </Grid>
+        </Collapse>
       </Paper>
 
       {/* Current Hole Section */}
-      <Grid container spacing={3}>
-        <Grid item xs={12}>
-          <Paper sx={{ p: 2 }}>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={8}>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 } }}>
             <Typography variant="h6" gutterBottom>Current Hole</Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={8}>
-                <Grid container spacing={2}>
-                  <Grid item xs={4}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel id="hole-select-label">Hole</InputLabel>
-                      <Select
-                        labelId="hole-select-label"
-                        id="hole-select"
-                        value={currentHole}
-                        onChange={handleHoleChange}
-                        label="Hole"
-                      >
-                        {holes.map(hole => (
-                          <MenuItem key={hole.number} value={hole.number}>
-                            Hole {hole.number}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <FormControl fullWidth size="small">
-                      <InputLabel id="banker-select-label">Select Banker</InputLabel>
-                      <Select
-                        labelId="banker-select-label"
-                        id="banker-select"
-                        value={currentHoleSetup.banker || ''}
-                        label="Select Banker"
-                        onChange={(e) => handleBankerChange(e.target.value || undefined)}
-                      >
-                        <MenuItem value="">None</MenuItem>
-                        {players.map(player => (
-                          <MenuItem key={player.id} value={player.id}>
-                            {player.name || `Player ${player.id}`}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={4}>
-                    <FormControl>
-                      <InputLabel htmlFor="dots-input">Dots</InputLabel>
-                      <Input
-                        id="dots-input"
-                        type="number"
-                        value={currentHoleSetup.dots}
-                        onChange={(e) => handleDotsChange(parseInt(e.target.value) || 0)}
-                        inputProps={{ min: 0 }}
-                        aria-label="dots"
-                      />
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      {holes.find(h => h.number === currentHole)?.par === 3 ? 'Triple Bet' : 'Double Bet'}
-                    </Typography>
-                    {players.map(player => (
-                      <Button
-                        key={player.id}
-                        variant={currentHoleSetup.doubles?.[player.id] ? 'contained' : 'outlined'}
-                        onClick={() => handleDoubleChange(player.id, !currentHoleSetup.doubles?.[player.id])}
-                        sx={{ m: 1 }}
-                      >
-                        {player.name || `Player ${player.id}`}
-                      </Button>
+              {/* Hole Selection */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small">
+                  <InputLabel>Hole</InputLabel>
+                  <Select
+                    value={currentHole}
+                    onChange={handleHoleChange}
+                    label="Hole"
+                  >
+                    {holes.map((hole) => (
+                      <MenuItem key={hole.number} value={hole.number}>
+                        Hole {hole.number} (Par {hole.par})
+                      </MenuItem>
                     ))}
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle2" gutterBottom>Scores</Typography>
-                    <table role="table" aria-label="Player Scores">
-                      <thead>
-                        <tr>
-                          <th>Player</th>
-                          <th>Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {players.map(player => (
-                          <tr key={player.id}>
-                            <td>{player.name}</td>
-                            <td>
-                              <TextField
-                                fullWidth
-                                size="small"
-                                type="number"
-                                inputProps={{
-                                  'aria-label': `Score for ${player.name}`,
-                                  role: 'spinbutton'
-                                }}
-                                value={scores[player.id]?.[currentHole] ?? ''}
-                                onChange={(e) => onScoreChange(player.id, currentHole, e.target.value ? parseInt(e.target.value, 10) : null)}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </Grid>
-                </Grid>
+                  </Select>
+                </FormControl>
               </Grid>
-              <Grid item xs={12} md={4}>
-                <Typography variant="subtitle2" gutterBottom>Dots</Typography>
-                {currentHoleSetup.banker ? (
-                  <Stack spacing={1}>
-                    {Object.entries(scores)
-                      .filter(([_, playerScores]) => playerScores[currentHole] !== null)
-                      .map(([playerId, playerScores]) => {
-                        const player = players.find(p => p.id === playerId)?.name;
-                        const playerScore = playerScores[currentHole]!;
-                        const bankerScore = currentHoleSetup.banker && scores[currentHoleSetup.banker] ? scores[currentHoleSetup.banker][currentHole]! : null;
-                        if (!bankerScore || !currentHoleSetup.banker) return null;
-                        
-                        const currentHolePar = holes.find(h => h.number === currentHole)?.par || 4;
-                        const { points, isPositive } = calculatePoints(
-                          playerScore,
-                          bankerScore,
-                          currentHolePar,
-                          currentHoleSetup.dots,
-                          Boolean(currentHoleSetup.doubles?.[playerId]),
-                          Boolean(currentHoleSetup.doubles?.[currentHoleSetup.banker]),
-                          doubleBirdieBets,
-                          playerId === currentHoleSetup.banker
-                        );
-                        
-                        return (
-                          <Stack 
-                            key={playerId} 
-                            direction="row" 
-                            spacing={1} 
-                            alignItems="center"
-                            justifyContent="space-between"
-                            sx={{ minWidth: 100 }}
-                          >
+
+              {/* Banker Selection */}
+              <Grid item xs={12} sm={6}>
+                <FormControl fullWidth size="small" data-testid="banker-select">
+                  <InputLabel>Banker</InputLabel>
+                  <Select
+                    value={currentHoleSetup.banker || ''}
+                    onChange={(e) => handleBankerChange(e.target.value || undefined)}
+                    label="Banker"
+                  >
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {players.map((player) => (
+                      <MenuItem key={player.id} value={player.id}>
+                        {player.name || `Player ${player.id}`}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+
+              {/* Dots Input */}
+              <Grid item xs={12}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <FormControl fullWidth size="small" data-testid="dots-input">
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Dots"
+                      value={currentHoleSetup.dots || ''}
+                      onChange={(e) => handleDotsChange(Number(e.target.value))}
+                      inputProps={{
+                        min: gameOptions.minDots,
+                        max: gameOptions.maxDots,
+                        'aria-label': 'Dots'
+                      }}
+                      size="small"
+                    />
+                  </FormControl>
+                  <Typography variant="body2" color="text.secondary">
+                    (Min: {gameOptions.minDots}, Max: {gameOptions.maxDots})
+                  </Typography>
+                </Box>
+              </Grid>
+
+              {/* Player Scores */}
+              <Grid item xs={12}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  flexWrap: 'wrap', 
+                  gap: 1,
+                  '& .MuiButton-root': {
+                    minWidth: { xs: 'calc(50% - 8px)', sm: 'auto' }
+                  }
+                }}>
+                  {players.map((player) => (
+                    <Button
+                      key={player.id}
+                      variant={currentHoleSetup.doubles?.[player.id] ? 'contained' : 'outlined'}
+                      onClick={() => handleDoubleChange(player.id, !currentHoleSetup.doubles?.[player.id])}
+                      size="small"
+                    >
+                      {player.name || `Player ${player.id}`}
+                    </Button>
+                  ))}
+                </Box>
+              </Grid>
+
+              {/* Score Grid */}
+              <Grid item xs={12}>
+                <TableContainer component={Paper} variant="outlined">
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Player</TableCell>
+                        <TableCell align="right">Score</TableCell>
+                        <TableCell align="right">Points</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {players.map((player) => (
+                        <TableRow key={player.id}>
+                          <TableCell component="th" scope="row">
+                            <Typography variant="body2" noWrap>
+                              {player.name || `Player ${player.id}`}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <TextField
+                              type="number"
+                              value={scores[player.id][currentHole] === null ? '' : scores[player.id][currentHole]}
+                              onChange={(e) => onScoreChange(player.id, currentHole, e.target.value === '' ? null : parseInt(e.target.value))}
+                              size="small"
+                              inputProps={{
+                                style: { textAlign: 'right', width: '60px' }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell align="right">
                             <Typography 
                               variant="body2" 
                               sx={{ 
-                                fontWeight: playerId === currentHoleSetup.banker ? 700 : 400
+                                color: calculateHolePoints(player.id) >= 0 ? 'success.main' : 'error.main',
+                                fontWeight: 500
                               }}
                             >
-                              {player}
+                              {calculateHolePoints(player.id)}
                             </Typography>
-                            <Typography 
-                              variant="body2"
-                              sx={{ 
-                                color: isPositive ? 'success.main' : 'error.main'
-                              }}
-                            >
-                              {isPositive ? '+' : '-'}{points}
-                            </Typography>
-                          </Stack>
-                        );
-                      })}
-                  </Stack>
-                ) : (
-                  <Typography color="text.secondary">No Banker</Typography>
-                )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               </Grid>
             </Grid>
           </Paper>
         </Grid>
 
         {/* Dots History Section */}
-        <Grid item xs={12}>
+        <Grid item xs={12} md={4}>
           <Paper sx={{ p: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                mb: 2,
+                flexWrap: 'wrap',
+                gap: 1
+              }}
+            >
               <Typography variant="h6">Dots History</Typography>
-              <IconButton onClick={() => setDotsHistoryOpen(!dotsHistoryOpen)}>
-                {dotsHistoryOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
-              </IconButton>
+              <Button
+                onClick={() => setDotsHistoryOpen(!dotsHistoryOpen)}
+                endIcon={dotsHistoryOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+                sx={{ minWidth: 120 }}
+              >
+                {dotsHistoryOpen ? 'Hide' : 'Show'}
+              </Button>
             </Box>
             <Collapse in={dotsHistoryOpen}>
-              <table role="table" aria-label="Dots History">
-                <thead>
-                  <tr>
-                    <th>Hole</th>
-                    <th>Player</th>
-                    <th>Dots</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {holes.map((hole) => {
-                    const setup = holeSetups[hole.number] || { ...emptyHoleSetup };
-                    if (!setup.banker) return null;
-
-                    return (
-                      <tr key={hole.number}>
-                        <td>Hole {hole.number}</td>
-                        <td>{setup.banker}</td>
-                        <td>{dotsHistory[setup.banker] || 0}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              {currentHoleSetup.banker ? (
+                <Stack spacing={1}>
+                  {Object.entries(scores)
+                    .sort(([aId], [bId]) => {
+                      if (aId === currentHoleSetup.banker) return 1;
+                      if (bId === currentHoleSetup.banker) return -1;
+                      return 0;
+                    })
+                    .filter(([playerId]) => {
+                      const hasScore = scores[playerId][currentHole] !== null;
+                      return hasScore && (playerId === currentHoleSetup.banker || currentHoleSetup.banker);
+                    })
+                    .map(([playerId]) => {
+                      const player = players.find(p => p.id === playerId)?.name;
+                      const points = calculateHolePoints(playerId);
+                      
+                      return (
+                        <Stack 
+                          key={playerId} 
+                          direction="row" 
+                          spacing={1} 
+                          alignItems="center"
+                          justifyContent="space-between"
+                          sx={{ 
+                            p: 1, 
+                            bgcolor: 'background.default',
+                            borderRadius: 1
+                          }}
+                        >
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: playerId === currentHoleSetup.banker ? 700 : 400
+                            }}
+                          >
+                            {player}
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Typography 
+                              variant="body2"
+                              sx={{ 
+                                color: points >= 0 ? 'success.main' : 'error.main',
+                                minWidth: 40,
+                                textAlign: 'right'
+                              }}
+                            >
+                              {points >= 0 ? '+' : ''}{points}
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              color="text.secondary"
+                            >
+                              dots
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      );
+                    })}
+                </Stack>
+              ) : (
+                <Typography color="text.secondary">No Banker Selected</Typography>
+              )}
             </Collapse>
           </Paper>
         </Grid>

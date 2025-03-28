@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useQuery } from '@apollo/client';
 import { Game } from '../components/Game';
 import { Player, PlayerForm } from '../components/PlayerForm';
-import { GameType } from '../types/game';
+import { GameType, GolfHole } from '../types/game';
 import { Box, Paper, Tab, Tabs } from '@mui/material';
 import { Scorecard } from '../components/Scorecard';
+import { GET_COURSE_HOLES } from '../graphql/queries';
 
 export const GamePage = () => {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -13,8 +15,14 @@ export const GamePage = () => {
   const [gameType, setGameType] = useState<GameType>('banker');
   const [currentHole, setCurrentHole] = useState(1);
 
-  // Default holes for standalone game
-  const defaultHoles = Array.from({ length: 18 }, (_, i) => ({
+  // Get course holes data
+  const { data: courseData } = useQuery(GET_COURSE_HOLES, {
+    variables: { courseId: selectedCourseId },
+    skip: !selectedCourseId
+  });
+
+  // Use course holes if available, otherwise use default
+  const holes: GolfHole[] = courseData?.golfCourse?.tees?.[0]?.holes || Array.from({ length: 18 }, (_, i) => ({
     number: i + 1,
     par: 4,
     strokeIndex: i + 1
@@ -75,7 +83,7 @@ export const GamePage = () => {
 
       {selectedTab === 1 && (
         <Scorecard
-          holes={defaultHoles}
+          holes={holes}
           players={players}
           scores={scores}
           onScoreChange={handleScoreChange}
@@ -85,8 +93,7 @@ export const GamePage = () => {
 
       {selectedTab === 2 && (
         <Game
-          holes={defaultHoles}
-          courseId={selectedCourseId}
+          holes={holes}
           players={players}
           scores={scores}
           currentHole={currentHole}
