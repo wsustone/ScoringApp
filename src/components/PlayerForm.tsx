@@ -53,7 +53,7 @@ interface GolfCourse {
   id: string;
   name: string;
   location: string;
-  tees: {
+  teeSettings: {
     id: string;
     name: string;
     gender: string;
@@ -287,7 +287,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
                     >
                       <ListItemText
                         primary={`${player.name} (Handicap: ${player.handicap})`}
-                        secondary={`Tee: ${courses.find((c: GolfCourse) => c.id === selectedCourseId)?.tees.find((t: GolfCourse['tees'][0]) => t.id === player.teeId)?.name || 'Not selected'}`}
+                        secondary={`Tee: ${courses.find((c: GolfCourse) => c.id === selectedCourseId)?.teeSettings.find((t: GolfCourse['teeSettings'][0]) => t.id === player.teeId)?.name || 'Not selected'}`}
                       />
                     </ListItem>
                   ))}

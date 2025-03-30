@@ -25,7 +25,7 @@ export const EditPlayer = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { data, loading, error: courseError } = useQuery(GET_GOLF_COURSES);
-  const course = data?.golfCourses?.find((c: any) => c.id === courseId);
+  const course = data?.golfCourses?.find((c: { id: string; name: string; location: string; teeSettings: Array<{ id: string; name: string; courseRating: number; slopeRating: number }> }) => c.id === courseId);
 
   // Load player data on component mount
   useEffect(() => {
@@ -124,9 +124,9 @@ export const EditPlayer = () => {
               onChange={(e) => setTeeId(e.target.value)}
               label="Select Tee"
             >
-              {course.tees.map((tee: any) => (
+              {course.teeSettings.map((tee: { id: string; name: string; courseRating: number; slopeRating: number }) => (
                 <MenuItem key={tee.id} value={tee.id}>
-                  {tee.name} ({tee.gender})
+                  {tee.name}
                 </MenuItem>
               ))}
             </Select>

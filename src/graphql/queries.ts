@@ -6,10 +6,9 @@ export const GET_GOLF_COURSES = gql`
       id
       name
       location
-      tees {
+      teeSettings {
         id
         name
-        gender
         courseRating
         slopeRating
       }
@@ -23,10 +22,9 @@ export const GET_GOLF_COURSE = gql`
       id
       name
       location
-      tees {
+      teeSettings {
         id
         name
-        gender
         courseRating
         slopeRating
         holes {
@@ -45,7 +43,7 @@ export const GET_COURSE_HOLES = gql`
   query GetCourseHoles($courseId: ID!) {
     golfCourse(id: $courseId) {
       id
-      tees {
+      teeSettings {
         holes {
           number
           par
@@ -67,7 +65,7 @@ export const GET_ROUND = gql`
       players {
         id
         playerId
-        playerName
+        name
         handicap
         teeId
       }
@@ -112,7 +110,7 @@ export const GET_ACTIVE_ROUNDS = gql`
       courseName
       startTime
       players {
-        playerName
+        name
         handicap
       }
     }
@@ -129,7 +127,7 @@ export const START_ROUND = gql`
       players {
         id
         playerId
-        playerName
+        name
         handicap
         teeId
       }

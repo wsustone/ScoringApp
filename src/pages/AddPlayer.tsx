@@ -11,9 +11,10 @@ import {
   Select,
   MenuItem,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import { useQuery } from '@apollo/client';
-import { GET_GOLF_COURSES } from '../graphql/queries';
+import { GET_GOLF_COURSE } from '../graphql/queries';
 import { Player } from '../components/PlayerForm';
 
 export const AddPlayer = () => {
@@ -24,8 +25,22 @@ export const AddPlayer = () => {
   const [teeId, setTeeId] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const { data, loading, error: courseError } = useQuery(GET_GOLF_COURSES);
-  const course = data?.golfCourses?.find((c: any) => c.id === courseId);
+  // Use GET_GOLF_COURSE instead of GET_GOLF_COURSES to get a single course
+  const { data, loading, error: courseError } = useQuery(GET_GOLF_COURSE, {
+    variables: { id: courseId },
+    onCompleted: (data) => {
+      console.log('Query completed. Data:', data);
+    },
+    onError: (error) => {
+      console.error('Query error:', error);
+    },
+  });
+
+  const course = data?.golfCourse;
+
+  console.log('Course ID:', courseId);
+  console.log('Course data:', course);
+  console.log('Tee settings:', course?.teeSettings);
 
   const handleSubmit = () => {
     if (!name) {
@@ -54,14 +69,14 @@ export const AddPlayer = () => {
     // Save back to localStorage
     localStorage.setItem('players', JSON.stringify(updatedPlayers));
 
-    // Navigate back to dashboard (the selected course will be preserved in localStorage)
+    // Navigate back to dashboard
     navigate('/');
   };
 
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" m={4}>
-        <Typography>Loading course details...</Typography>
+        <CircularProgress />
       </Box>
     );
   }
@@ -80,7 +95,7 @@ export const AddPlayer = () => {
     <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
-          Add New Player
+          Add New Player - {course.name}
         </Typography>
         
         {error && (
@@ -113,29 +128,22 @@ export const AddPlayer = () => {
               onChange={(e) => setTeeId(e.target.value)}
               label="Select Tee"
             >
-              {course.tees.map((tee: any) => (
+              {course?.teeSettings?.map((tee: { id: string; name: string; courseRating: number; slopeRating: number }) => (
                 <MenuItem key={tee.id} value={tee.id}>
-                  {tee.name} ({tee.gender})
+                  {tee.name} (Rating: {tee.courseRating}, Slope: {tee.slopeRating})
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
 
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-            <Button
-              variant="outlined"
-              onClick={() => navigate('/')}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleSubmit}
-              disabled={!name || !teeId}
-            >
-              Add Player
-            </Button>
-          </Box>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleSubmit}
+            sx={{ mt: 2 }}
+          >
+            Add Player
+          </Button>
         </Box>
       </Paper>
     </Box>

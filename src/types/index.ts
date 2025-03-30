@@ -18,7 +18,7 @@ export interface GolfCourse {
   id: string;
   name: string;
   location: string;
-  tees: TeeSetting[];
+  teeSettings: TeeSetting[];
 }
 
 export interface HoleSetup {

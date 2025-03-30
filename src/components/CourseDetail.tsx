@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { Scorecard } from './Scorecard';
 import { Game } from './Game';
 import { PlayerForm, Player } from './PlayerForm';
-import { GolfHole, HoleSetup } from '../types/game';
+import { GolfHole } from '../types/game';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -46,7 +46,7 @@ export const CourseDetail = () => {
   const [selectedTab, setSelectedTab] = useState(0);
   const [players, setPlayers] = useState<Player[]>([]);
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>({});
-  const [holeSetups, setHoleSetups] = useState<{ [key: number]: HoleSetup }>({});
+  const [currentHole, setCurrentHole] = useState<number>(1);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
 
   const { loading, error, data } = useQuery(GET_GOLF_COURSE, {
@@ -72,13 +72,6 @@ export const CourseDetail = () => {
     }));
   };
 
-  const handleHoleSetupChange = (holeNumber: number, setup: Partial<HoleSetup>) => {
-    setHoleSetups(prev => ({
-      ...prev,
-      [holeNumber]: { ...prev[holeNumber], ...setup },
-    }));
-  };
-
   const handleCourseChange = (courseId: string) => {
     setSelectedCourseId(courseId);
   };
@@ -88,7 +81,7 @@ export const CourseDetail = () => {
   if (!data?.golfCourse) return <Typography>Course not found</Typography>;
 
   const course = data.golfCourse;
-  const holes: GolfHole[] = course.tees?.[0]?.holes || [];
+  const holes: GolfHole[] = course.teeSettings?.[0]?.holes || [];
 
   return (
     <Container maxWidth="lg">
@@ -116,7 +109,6 @@ export const CourseDetail = () => {
             players={players}
             scores={scores}
             onScoreChange={handleScoreChange}
-            selectedCourseId={selectedCourseId}
           />
         </TabPanel>
 
@@ -125,8 +117,8 @@ export const CourseDetail = () => {
             holes={holes}
             players={players}
             scores={scores}
-            holeSetups={holeSetups}
-            onHoleSetupChange={handleHoleSetupChange}
+            currentHole={currentHole}
+            onCurrentHoleChange={setCurrentHole}
             onScoreChange={handleScoreChange}
           />
         </TabPanel>
