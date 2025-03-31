@@ -54,6 +54,21 @@ export const BankerGame: React.FC<BankerGameProps> = ({
   const [showGameOptions, setShowGameOptions] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Initialize hole setups if they don't exist
+  useEffect(() => {
+    if (Object.keys(holeSetups).length === 0 && holes.length > 0 && players.length > 0) {
+      const initialSetups: { [key: number]: HoleSetup } = {};
+      holes.forEach(hole => {
+        initialSetups[hole.number] = {
+          bankerId: players[0].id, // Default to first player as banker
+          dots: 1,
+          doubles: {},
+        };
+      });
+      setHoleSetups(initialSetups);
+    }
+  }, [holes, players, holeSetups]);
+
   const handleError = (error: ApolloError) => {
     const message = error.graphQLErrors.length > 0
       ? error.graphQLErrors[0].message
@@ -99,7 +114,11 @@ export const BankerGame: React.FC<BankerGameProps> = ({
         }
       });
     }
-  }, [scores, holeSetups, gameOptions, roundId]);
+  }, [roundId, holeSetups, scores, holes, updateRound, gameOptions]);
+
+  const handleScoreChange = (playerId: string, hole: number, score: number | null) => {
+    onScoreChange(playerId, hole, score);
+  };
 
   const handleHoleSetupChange = (holeNumber: number, bankerId: string, dots: number) => {
     setHoleSetups(prev => ({
@@ -450,7 +469,11 @@ export const BankerGame: React.FC<BankerGameProps> = ({
                         </Typography>
                       </TableCell>
                       <TableCell align="center">
-                        {scores[player.id]?.[currentHole] || '-'}
+                        <TextField
+                          type="number"
+                          value={scores[player.id]?.[currentHole] || ''}
+                          onChange={(e) => handleScoreChange(player.id, currentHole, parseInt(e.target.value) || null)}
+                        />
                       </TableCell>
                       <TableCell align="right" sx={{
                         color: (theme) => {

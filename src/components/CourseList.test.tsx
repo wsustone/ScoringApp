@@ -12,8 +12,32 @@ const mocks = [
     result: {
       data: {
         golfCourses: [
-          { id: '1', name: 'Test Course 1', location: 'Test Location 1' },
-          { id: '2', name: 'Test Course 2', location: 'Test Location 2' },
+          {
+            id: '1',
+            name: 'Test Course 1',
+            location: 'Test Location 1',
+            teeSettings: [
+              {
+                id: 'tee1',
+                name: 'Blue',
+                courseRating: 72.0,
+                slopeRating: 128,
+              },
+            ],
+          },
+          {
+            id: '2',
+            name: 'Test Course 2',
+            location: 'Test Location 2',
+            teeSettings: [
+              {
+                id: 'tee2',
+                name: 'White',
+                courseRating: 70.0,
+                slopeRating: 125,
+              },
+            ],
+          },
         ],
       },
     },

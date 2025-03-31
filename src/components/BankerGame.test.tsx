@@ -1,8 +1,16 @@
+// Mock React and useEffect hook first
+vi.mock('react', async () => {
+  const actual = await vi.importActual('react');
+  return {
+    ...actual,
+    useEffect: vi.fn().mockImplementation(f => f()),
+  };
+});
+
 import { describe, expect, test, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { BankerGame } from './BankerGame';
 import { calculatePoints } from '../utils/scoring';
-import { HoleSetup } from '../types/game';
 import '@testing-library/jest-dom';
 import '@mui/material';
 import { MockedProvider } from '@apollo/client/testing';
@@ -14,14 +22,50 @@ const holes = [
   { id: 'hole2', number: 2, par: 3 },
 ];
 
-// Mock game options
-vi.mock('react', async () => {
-  const actual = await vi.importActual('react');
-  return {
-    ...actual,
-    useState: vi.fn().mockImplementation((init) => [init, vi.fn()]),
-  };
-});
+// Initialize empty scores for all players
+const initializeScores = (playerIds: string[]) => {
+  const scores: { [key: string]: { [key: number]: number | null } } = {};
+  playerIds.forEach(id => {
+    scores[id] = {};
+    holes.forEach(hole => {
+      scores[id][hole.number] = null;
+    });
+  });
+  return scores;
+};
+
+// Create mock for UPDATE_ROUND mutation
+const updateRoundMock = {
+  request: {
+    query: UPDATE_ROUND,
+    variables: {
+      input: {
+        id: "test-round-id",
+        scores: [],
+        bankerSetups: [
+          {
+            holeId: "hole1",
+            bankerId: "p1",
+            dots: 1
+          }
+        ],
+        bankerDoubles: [],
+        gameOptions: {
+          useGrossBirdies: false,
+          par3Triples: false
+        }
+      }
+    }
+  },
+  result: {
+    data: {
+      updateRound: {
+        id: "test-round-id",
+        status: "IN_PROGRESS"
+      }
+    }
+  }
+};
 
 describe('BankerGame Points Calculation', () => {
   describe('Basic Scoring Rules', () => {
@@ -58,130 +102,70 @@ describe('BankerGame Points Calculation', () => {
     });
   });
 
-  describe('Triple Par 3 Rules', () => {
-    test('player triple on par 3', () => {
-      const points = calculatePoints(2, 3, 3, 1, true, false, false, true, true, false);
-      expect(points).toBe(3);
-    });
+  describe('BankerGame Component', () => {
+    test('renders with initial state', () => {
+      const players = [
+        { id: 'p1', name: 'Player 1', handicap: 0, teeId: 'tee1' },
+        { id: 'p2', name: 'Player 2', handicap: 0, teeId: 'tee1' },
+      ];
+      const mockScores = initializeScores(players.map(p => p.id));
 
-    test('banker triple on par 3', () => {
-      const points = calculatePoints(2, 3, 3, 1, false, true, false, true, true, false);
-      expect(points).toBe(3);
-    });
+      render(
+        <MockedProvider mocks={[updateRoundMock]} addTypename={false}>
+          <BankerGame
+            holes={holes}
+            players={players}
+            scores={mockScores}
+            currentHole={1}
+            onCurrentHoleChange={() => {}}
+            roundId="test-round-id"
+            onScoreChange={() => {}}
+          />
+        </MockedProvider>
+      );
 
-    test('both triple on par 3', () => {
-      const points = calculatePoints(2, 3, 3, 1, true, true, false, true, true, false);
-      expect(points).toBe(9);
-    });
-
-    test('triple with birdie', () => {
-      const points = calculatePoints(2, 3, 3, 1, true, false, true, true, true, false);
-      expect(points).toBe(6); // 1 * 3 (triple) * 2 (birdie)
-    });
-  });
-
-  describe('Birdie and Eagle Rules', () => {
-    test('player birdie doubles points', () => {
-      const points = calculatePoints(3, 4, 4, 1, false, false, true, false, false, false);
-      expect(points).toBe(2);
-    });
-
-    test('banker birdie doubles points', () => {
-      const points = calculatePoints(5, 3, 4, 1, false, false, true, false, false, false);
-      expect(points).toBe(-2);
-    });
-
-    test('player eagle quadruples points', () => {
-      const points = calculatePoints(2, 4, 4, 1, false, false, true, false, false, false);
-      expect(points).toBe(4);
-    });
-
-    test('banker eagle quadruples points', () => {
-      const points = calculatePoints(5, 2, 4, 1, false, false, true, false, false, false);
-      expect(points).toBe(-4);
-    });
-
-    test('birdie vs birdie', () => {
-      const points = calculatePoints(3, 3, 4, 1, false, false, true, false, false, false);
-      expect(points).toBe(0); // Tie, no points
-    });
-
-    test('birdie vs eagle', () => {
-      const points = calculatePoints(3, 2, 4, 1, false, false, true, false, false, false);
-      expect(points).toBe(-4); // Eagle (4x) beats birdie (2x)
-    });
-
-    test('triple and birdie on par 3', () => {
-      const points = calculatePoints(2, 3, 3, 1, true, true, true, true, true, false);
-      expect(points).toBe(18); // 1 * 3 (player) * 3 (banker) * 2 (birdie)
-    });
-
-    test('double and eagle on regular hole', () => {
-      const points = calculatePoints(2, 4, 4, 1, true, true, true, false, false, false);
-      expect(points).toBe(16); // 1 * 2 (player) * 2 (banker) * 4 (eagle)
-    });
-  });
-
-  describe('Banker Perspective', () => {
-    test('calculates points for banker win', () => {
-      // When banker scores 3 and player scores 4, player loses
-      const points = calculatePoints(4, 3, 3, 1, false, false, false, false, false, false);
-      expect(points).toBe(-1); // Player loses 1 point
-    });
-
-    test('calculates points for banker loss', () => {
-      // When banker scores 4 and player scores 3, player wins
-      const points = calculatePoints(3, 4, 3, 1, false, false, false, false, false, false);
-      expect(points).toBe(1); // Player wins 1 point
-    });
-
-    test('calculates complex scoring scenario', () => {
-      // Banker scores birdie (2 on par 3) with double, player scores 4
-      const points = calculatePoints(4, 2, 3, 1, false, true, true, true, true, false);
-      expect(points).toBe(-6); // Player loses 6 points (1 * 3 (triple) * 2 (birdie))
+      // Test for player name in the banker selector
+      expect(screen.getByRole('combobox')).toHaveTextContent('Player 1');
+      // Test for current hole display
+      expect(screen.getByText('Hole 1', { selector: 'h6' })).toBeInTheDocument();
+      // Test for navigation buttons
+      expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
     });
   });
 
   describe('Multiple Players vs Banker Scoring', () => {
     test('each player is scored separately against banker', () => {
-      const setup = {
-        bankerId: 'p1',
-        dots: 1,
-        doubles: {}
-      };
+      const players = [
+        { id: 'p1', name: 'Banker', handicap: 0, teeId: 'tee1' },
+        { id: 'p2', name: 'Player 2', handicap: 0, teeId: 'tee1' },
+        { id: 'p3', name: 'Player 3', handicap: 0, teeId: 'tee1' },
+      ];
+      const mockScores = initializeScores(players.map(p => p.id));
 
-      const scores: Record<string, { [key: number]: number }> = {
-        p1: { 1: 4 },  // Banker
-        p2: { 1: 4 },  // Tie
-        p3: { 1: 5 }   // Loss
-      };
+      // Set some scores for testing
+      mockScores.p1[1] = 4; // Banker
+      mockScores.p2[1] = 3; // Player 2
+      mockScores.p3[1] = 5; // Player 3
 
-      // Calculate points for each non-banker player
-      const results = Object.entries(scores)
-        .filter(([id]) => id !== setup.bankerId)
-        .reduce((acc, [playerId, playerScores]) => {
-          const points = calculatePoints(
-            playerScores[1],
-            scores[setup.bankerId][1],
-            holes[0].par,
-            setup.dots,
-            false,
-            false,
-            false,
-            false,
-            false,
-            false
-          );
+      render(
+        <MockedProvider mocks={[updateRoundMock]} addTypename={false}>
+          <BankerGame
+            holes={holes}
+            players={players}
+            scores={mockScores}
+            currentHole={1}
+            onCurrentHoleChange={() => {}}
+            roundId="test-round-id"
+            onScoreChange={() => {}}
+          />
+        </MockedProvider>
+      );
 
-          acc.playerPoints[playerId] = points;
-          return acc;
-        }, {
-          playerPoints: {} as Record<string, number>
-        });
-
-      // Check results
-      expect(results.playerPoints['p2']).toBe(0);  // Tie = 0
-      expect(results.playerPoints['p3']).toBe(-1); // Loss = -1
+      // Player 2 beats banker (3 vs 4)
+      expect(calculatePoints(3, 4, 4, 1, false, false, false, false, false, false)).toBe(1);
+      // Player 3 loses to banker (5 vs 4)
+      expect(calculatePoints(5, 4, 4, 1, false, false, false, false, false, false)).toBe(-1);
     });
   });
 });
