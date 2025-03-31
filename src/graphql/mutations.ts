@@ -4,14 +4,12 @@ export const START_ROUND = gql`
   mutation StartRound(
     $courseName: String!,
     $players: [PlayerInput!]!,
-    $holes: [HoleInput!]!,
-    $gameOptions: GameOptionsInput!
+    $holes: [HoleInput!]!
   ) {
     startRound(
       courseName: $courseName,
       players: $players,
-      holes: $holes,
-      gameOptions: $gameOptions
+      holes: $holes
     )
   }
 `;
@@ -26,24 +24,6 @@ export const UPDATE_ROUND = gql`
         holeId
         score
         timestamp
-      }
-      bankerSetups {
-        id
-        holeId
-        bankerId
-        dots
-      }
-      bankerDoubles {
-        id
-        holeId
-        playerId
-        isDoubled
-      }
-      gameOptions {
-        minDots
-        maxDots
-        dotValue
-        doubleBirdieBets
       }
     }
   }

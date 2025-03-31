@@ -112,18 +112,10 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     // Create default holes array for 18 holes
     const holes = Array.from({ length: 18 }, (_, i) => ({
       number: i + 1,
-      par: 4 // Default par, adjust if you have actual hole data
+      par: 4, // Default par, adjust if you have actual hole data
+      strokeIndex: i + 1, // Default stroke index
+      distance: 400 // Default distance
     }));
-
-    // Default game options
-    const gameOptions = {
-      minDots: 1,
-      maxDots: 4,
-      dotValue: 0.25,
-      doubleBirdieBets: true,
-      useGrossBirdies: false,
-      par3Triples: true
-    };
 
     const playerData = players.map(player => ({
       id: player.id,
@@ -137,8 +129,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         variables: {
           courseName: selectedCourse.name,
           players: playerData,
-          holes: holes,
-          gameOptions: gameOptions
+          holes: holes
         }
       });
     } catch (error) {

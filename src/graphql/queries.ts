@@ -81,24 +81,6 @@ export const GET_ROUND = gql`
         score
         timestamp
       }
-      bankerSetups {
-        id
-        holeId
-        bankerId
-        dots
-      }
-      bankerDoubles {
-        id
-        holeId
-        playerId
-        isDoubled
-      }
-      gameOptions {
-        minDots
-        maxDots
-        dotValue
-        doubleBirdieBets
-      }
     }
   }
 `;
@@ -145,25 +127,6 @@ export const UPDATE_ROUND = gql`
         holeId
         score
         timestamp
-      }
-      bankerSetups {
-        id
-        holeId
-        bankerId
-        dots
-      }
-      bankerDoubles {
-        id
-        holeId
-        playerId
-        isDoubled
-      }
-      gameOptions {
-        minDots
-        maxDots
-        dotValue
-        useGrossBirdies
-        par3Triples
       }
     }
   }

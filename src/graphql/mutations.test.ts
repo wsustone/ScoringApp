@@ -26,12 +26,6 @@ interface StartRoundVars {
     strokeIndex: number;
     distance: number;
   }>;
-  gameOptions: {
-    minDots: number;
-    maxDots: number;
-    dotValue: number;
-    doubleBirdieBets: boolean;
-  };
 }
 
 describe('START_ROUND mutation', () => {
@@ -58,13 +52,7 @@ describe('START_ROUND mutation', () => {
         strokeIndex: 1,
         distance: 400
       }
-    ],
-    gameOptions: {
-      minDots: 1,
-      maxDots: 3,
-      dotValue: 1.0,
-      doubleBirdieBets: true
-    }
+    ]
   };
 
   it('should successfully start a round', async () => {
@@ -100,8 +88,7 @@ describe('START_ROUND mutation', () => {
     );
 
     await waitFor(() => {
-      const result = mocks[0].result as { data: StartRoundData };
-      expect(result.data.startRound).toBe(roundId);
+      expect(screen.queryByText('GraphQL error:')).toBeNull();
     });
   });
 
