@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Switch, FormControlLabel } from '@mui/material';
+import { Box, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Switch, FormControlLabel, Typography } from '@mui/material';
 import { Player } from './PlayerForm';
 import { BankerHoleData } from '../types/game';
 
@@ -23,7 +23,10 @@ export const BankerHoleOptions: React.FC<BankerHoleOptionsProps> = ({
       holeId,
       bankerId,
       dots: bankerData?.dots || 1,
-      doubles: bankerData?.doubles || players.map(p => ({ playerId: p.id, isDoubled: false })),
+      doubles: players.map(p => ({
+        playerId: p.id,
+        isDoubled: bankerData?.doubles?.find(d => d.playerId === p.id)?.isDoubled || false
+      })),
     });
   };
 
@@ -81,20 +84,24 @@ export const BankerHoleOptions: React.FC<BankerHoleOptionsProps> = ({
             </Grid>
             
             <Grid item xs={12}>
-              {players
-                .filter(p => p.id !== bankerData.bankerId)
-                .map((player) => (
-                  <FormControlLabel
-                    key={player.id}
-                    control={
-                      <Switch
-                        checked={bankerData.doubles.find(d => d.playerId === player.id)?.isDoubled || false}
-                        onChange={(e) => handleDoubleChange(player.id, e.target.checked)}
-                      />
-                    }
-                    label={`${player.name} Doubles`}
-                  />
+              <Typography variant="subtitle1" gutterBottom>
+                Double Options
+              </Typography>
+              <Grid container spacing={1}>
+                {players.map((player) => (
+                  <Grid item xs={12} sm={6} key={player.id}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={bankerData.doubles.find(d => d.playerId === player.id)?.isDoubled || false}
+                          onChange={(e) => handleDoubleChange(player.id, e.target.checked)}
+                        />
+                      }
+                      label={`${player.name} ${player.id === bankerData.bankerId ? '(Banker)' : ''}`}
+                    />
+                  </Grid>
                 ))}
+              </Grid>
             </Grid>
           </>
         )}
