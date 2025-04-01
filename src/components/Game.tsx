@@ -1,6 +1,12 @@
 import { Box, Grid, Button, TextField, Typography } from '@mui/material';
 import { Player } from './PlayerForm';
-import { GolfHole } from '../types/game';
+
+interface GolfHole {
+  id: string;
+  holeNumber: number;
+  par: number;
+  scoringIndex: number;
+}
 
 interface GameProps {
   players: Player[];
@@ -19,7 +25,7 @@ export const Game = ({
   scores,
   onScoreChange,
 }: GameProps) => {
-  const currentHoleData = holes.find(h => h.number === currentHole);
+  const currentHoleData = holes.find(h => h.holeNumber === currentHole);
 
   const handlePrevHole = () => {
     if (currentHole > 1) {
@@ -33,13 +39,19 @@ export const Game = ({
     }
   };
 
+  const handleScoreChange = (playerId: string, value: string) => {
+    const score = value ? parseInt(value, 10) : null;
+    if (score !== null && (score < 1 || score > 20)) return;
+    onScoreChange(playerId, currentHole, score);
+  };
+
   return (
     <Box>
       <Grid container spacing={3}>
         <Grid item xs={12}>
           <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
             <Typography variant="h6">
-              Hole {currentHole} - Par {currentHoleData?.par || 4}
+              Hole {currentHole} - Par {currentHoleData?.par ?? 4}
             </Typography>
             <Box>
               <Button onClick={handlePrevHole} disabled={currentHole === 1}>
@@ -54,21 +66,26 @@ export const Game = ({
 
         {players.map((player) => (
           <Grid item xs={12} sm={6} md={4} key={player.id}>
-            <Box p={2} border={1} borderRadius={1} borderColor="divider">
+            <Box
+              sx={{
+                p: 2,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 1,
+                backgroundColor: 'background.paper',
+              }}
+            >
               <Typography variant="subtitle1" gutterBottom>
                 {player.name}
               </Typography>
               <TextField
-                label="Score"
                 type="number"
-                value={scores[player.id]?.[currentHole] || ''}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  onScoreChange(
-                    player.id,
-                    currentHole,
-                    value === '' ? null : parseInt(value)
-                  );
+                label="Score"
+                value={scores[player.id]?.[currentHole] ?? ''}
+                onChange={(e) => handleScoreChange(player.id, e.target.value)}
+                inputProps={{
+                  min: 1,
+                  max: 20,
                 }}
                 fullWidth
                 size="small"

@@ -2,10 +2,26 @@ import { useQuery } from '@apollo/client';
 import { GET_GOLF_COURSES } from '../graphql/queries';
 import { Card, CardContent, Typography, Grid, Box, CircularProgress, Container, Button } from '@mui/material';
 
-interface Course {
+interface GolfHole {
+  id: string;
+  holeNumber: number;
+  par: number;
+  scoringIndex: number;
+}
+
+interface GolfTee {
   id: string;
   name: string;
-  location: string;
+  gender: string;
+  courseRating: number;
+  slopeRating: number;
+  holes: GolfHole[];
+}
+
+interface GolfCourse {
+  id: string;
+  name: string;
+  tees: GolfTee[];
 }
 
 interface CourseListProps {
@@ -31,7 +47,7 @@ export const CourseList = ({ onCourseSelect }: CourseListProps) => {
         Golf Courses
       </Typography>
       <Grid container spacing={3}>
-        {data?.golfCourses.map((course: Course) => (
+        {data?.golfCourses.map((course: GolfCourse) => (
           <Grid item xs={12} sm={6} md={4} key={course.id}>
             <Card sx={{ 
               height: '100%',
@@ -43,7 +59,9 @@ export const CourseList = ({ onCourseSelect }: CourseListProps) => {
             }}>
               <CardContent>
                 <Typography variant="h6" gutterBottom>{course.name}</Typography>
-                <Typography color="textSecondary">{course.location}</Typography>
+                <Typography color="textSecondary" gutterBottom>
+                  Available Tees: {course.tees.map(tee => tee.name).join(', ')}
+                </Typography>
                 <Button
                   variant="contained"
                   color="primary"

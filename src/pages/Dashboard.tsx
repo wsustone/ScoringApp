@@ -1,42 +1,17 @@
-import { useState, useEffect } from 'react';
-import { PlayerForm } from '../components/PlayerForm';
-import { Player } from '../components/PlayerForm';
+import { useNavigate } from 'react-router-dom';
+import { CourseList } from '../components/CourseList';
+import { Container } from '@mui/material';
 
 export const Dashboard = () => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const navigate = useNavigate();
 
-  // Load players and selected course from localStorage on component mount
-  useEffect(() => {
-    const savedPlayers = localStorage.getItem('players');
-    const savedCourseId = localStorage.getItem('selectedCourseId');
-    
-    if (savedPlayers) {
-      setPlayers(JSON.parse(savedPlayers));
-    }
-    if (savedCourseId) {
-      setSelectedCourseId(savedCourseId);
-    }
-  }, []);
-
-  // Update players in localStorage when they change
-  const handlePlayersChange = (newPlayers: Player[]) => {
-    setPlayers(newPlayers);
-    localStorage.setItem('players', JSON.stringify(newPlayers));
-  };
-
-  // Update selected course in localStorage when it changes
-  const handleCourseChange = (courseId: string) => {
-    setSelectedCourseId(courseId);
-    localStorage.setItem('selectedCourseId', courseId);
+  const handleCourseSelect = (courseId: string) => {
+    navigate(`/course/${courseId}`);
   };
 
   return (
-    <PlayerForm
-      players={players}
-      onPlayersChange={handlePlayersChange}
-      selectedCourseId={selectedCourseId}
-      onCourseChange={handleCourseChange}
-    />
+    <Container maxWidth="lg">
+      <CourseList onCourseSelect={handleCourseSelect} />
+    </Container>
   );
 };

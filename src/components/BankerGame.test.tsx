@@ -1,171 +1,119 @@
-// Mock React and useEffect hook first
-vi.mock('react', async () => {
-  const actual = await vi.importActual('react');
-  return {
-    ...actual,
-    useEffect: vi.fn().mockImplementation(f => f()),
-  };
-});
-
-import { describe, expect, test, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { BankerGame } from './BankerGame';
-import { calculatePoints } from '../utils/scoring';
-import '@testing-library/jest-dom';
-import '@mui/material';
+/** @jsxImportSource @emotion/react */
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MockedProvider } from '@apollo/client/testing';
-import { UPDATE_ROUND } from '../graphql/mutations';
+import { BankerGame } from './BankerGame';
+import { UPDATE_SCORE } from '../graphql/mutations';
+import '@testing-library/jest-dom';
 
-// Mock holes for testing
-const holes = [
-  { id: 'hole1', number: 1, par: 4 },
-  { id: 'hole2', number: 2, par: 3 },
+const mockPlayers = [
+  { id: 'player1', name: 'Player 1', handicap: 10, teeId: 'tee1' },
+  { id: 'player2', name: 'Player 2', handicap: 15, teeId: 'tee1' }
 ];
 
-// Initialize empty scores for all players
-const initializeScores = (playerIds: string[]) => {
-  const scores: { [key: string]: { [key: number]: number | null } } = {};
-  playerIds.forEach(id => {
-    scores[id] = {};
-    holes.forEach(hole => {
-      scores[id][hole.number] = null;
-    });
-  });
-  return scores;
-};
+const mockHoles = [
+  { id: 'hole1', number: 1, par: 4 },
+  { id: 'hole2', number: 2, par: 3 },
+  { id: 'hole3', number: 3, par: 5 }
+];
 
-// Create mock for UPDATE_ROUND mutation
-const updateRoundMock = {
-  request: {
-    query: UPDATE_ROUND,
-    variables: {
-      input: {
-        id: "test-round-id",
-        scores: [],
-        bankerSetups: [
-          {
-            holeId: "hole1",
-            bankerId: "p1",
-            dots: 1
-          }
-        ],
-        bankerDoubles: [],
-        gameOptions: {
-          useGrossBirdies: false,
-          par3Triples: false
-        }
-      }
-    }
+const mockScores = {
+  player1: {
+    1: 3, // Birdie
+    2: 2, // Eagle
+    3: 5  // Par
   },
-  result: {
-    data: {
-      updateRound: {
-        id: "test-round-id",
-        status: "IN_PROGRESS"
-      }
-    }
+  player2: {
+    1: 4, // Par
+    2: 3, // Par
+    3: 6  // Bogey
   }
 };
 
-describe('BankerGame Points Calculation', () => {
-  describe('Basic Scoring Rules', () => {
-    test('player wins against banker', () => {
-      const points = calculatePoints(3, 4, 4, 1, false, false, false, false, false, false);
-      expect(points).toBe(1);
-    });
+describe('BankerGame', () => {
+  const defaultProps = {
+    players: mockPlayers,
+    holes: mockHoles,
+    scores: mockScores,
+    currentHole: 1,
+    roundId: 'round1',
+    onScoreChange: jest.fn()
+  };
 
-    test('player loses against banker', () => {
-      const points = calculatePoints(5, 4, 4, 1, false, false, false, false, false, false);
-      expect(points).toBe(-1);
-    });
+  const mocks = [
+    {
+      request: {
+        query: UPDATE_SCORE,
+        variables: {
+          input: {
+            roundId: 'round1',
+            playerId: 'player1',
+            holeId: 1,
+            score: 4
+          }
+        }
+      },
+      result: {
+        data: {
+          updateScore: {
+            id: 'score1',
+            playerId: 'player1',
+            holeId: 1,
+            score: 4,
+            timestamp: new Date().toISOString()
+          }
+        }
+      }
+    }
+  ];
 
-    test('tie results in no points', () => {
-      const points = calculatePoints(4, 4, 4, 1, false, false, false, false, false, false);
-      expect(points).toBe(0);
-    });
+  it('renders player names and scores', () => {
+    render(
+      <MockedProvider mocks={mocks} addTypename={false}>
+        <BankerGame {...defaultProps} />
+      </MockedProvider>
+    );
+
+    expect(screen.getByText('Player 1')).toBeInTheDocument();
+    expect(screen.getByText('Player 2')).toBeInTheDocument();
   });
 
-  describe('Double Betting Rules', () => {
-    test('player double on regular hole', () => {
-      const points = calculatePoints(3, 4, 4, 1, true, false, false, false, false, false);
-      expect(points).toBe(2);
-    });
+  it('calculates points correctly', () => {
+    render(
+      <MockedProvider mocks={mocks} addTypename={false}>
+        <BankerGame {...defaultProps} />
+      </MockedProvider>
+    );
 
-    test('banker double on regular hole', () => {
-      const points = calculatePoints(3, 4, 4, 1, false, true, false, false, false, false);
-      expect(points).toBe(2);
-    });
-
-    test('both double on regular hole', () => {
-      const points = calculatePoints(3, 4, 4, 1, true, true, false, false, false, false);
-      expect(points).toBe(4);
-    });
+    // Player 1 has a birdie (2 points)
+    expect(screen.getByText('2')).toBeInTheDocument();
+    
+    // Change to hole 2
+    const props = { ...defaultProps, currentHole: 2 };
+    render(
+      <MockedProvider mocks={mocks} addTypename={false}>
+        <BankerGame {...props} />
+      </MockedProvider>
+    );
+    
+    // Player 1 has an eagle (4 points)
+    expect(screen.getByText('4')).toBeInTheDocument();
   });
 
-  describe('BankerGame Component', () => {
-    test('renders with initial state', () => {
-      const players = [
-        { id: 'p1', name: 'Player 1', handicap: 0, teeId: 'tee1' },
-        { id: 'p2', name: 'Player 2', handicap: 0, teeId: 'tee1' },
-      ];
-      const mockScores = initializeScores(players.map(p => p.id));
+  it('handles score updates', async () => {
+    const onScoreChange = jest.fn();
+    render(
+      <MockedProvider mocks={mocks} addTypename={false}>
+        <BankerGame {...defaultProps} onScoreChange={onScoreChange} />
+      </MockedProvider>
+    );
 
-      render(
-        <MockedProvider mocks={[updateRoundMock]} addTypename={false}>
-          <BankerGame
-            holes={holes}
-            players={players}
-            scores={mockScores}
-            currentHole={1}
-            onCurrentHoleChange={() => {}}
-            roundId="test-round-id"
-            onScoreChange={() => {}}
-          />
-        </MockedProvider>
-      );
+    // Find the score input for Player 1
+    const scoreInput = screen.getAllByRole('spinbutton')[0];
+    
+    // Change the score
+    fireEvent.change(scoreInput, { target: { value: '4' } });
 
-      // Test for player name in the banker selector
-      expect(screen.getByRole('combobox')).toHaveTextContent('Player 1');
-      // Test for current hole display
-      expect(screen.getByText('Hole 1', { selector: 'h6' })).toBeInTheDocument();
-      // Test for navigation buttons
-      expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Next' })).toBeInTheDocument();
-    });
-  });
-
-  describe('Multiple Players vs Banker Scoring', () => {
-    test('each player is scored separately against banker', () => {
-      const players = [
-        { id: 'p1', name: 'Banker', handicap: 0, teeId: 'tee1' },
-        { id: 'p2', name: 'Player 2', handicap: 0, teeId: 'tee1' },
-        { id: 'p3', name: 'Player 3', handicap: 0, teeId: 'tee1' },
-      ];
-      const mockScores = initializeScores(players.map(p => p.id));
-
-      // Set some scores for testing
-      mockScores.p1[1] = 4; // Banker
-      mockScores.p2[1] = 3; // Player 2
-      mockScores.p3[1] = 5; // Player 3
-
-      render(
-        <MockedProvider mocks={[updateRoundMock]} addTypename={false}>
-          <BankerGame
-            holes={holes}
-            players={players}
-            scores={mockScores}
-            currentHole={1}
-            onCurrentHoleChange={() => {}}
-            roundId="test-round-id"
-            onScoreChange={() => {}}
-          />
-        </MockedProvider>
-      );
-
-      // Player 2 beats banker (3 vs 4)
-      expect(calculatePoints(3, 4, 4, 1, false, false, false, false, false, false)).toBe(1);
-      // Player 3 loses to banker (5 vs 4)
-      expect(calculatePoints(5, 4, 4, 1, false, false, false, false, false, false)).toBe(-1);
-    });
+    // Check if onScoreChange was called with correct arguments
+    expect(onScoreChange).toHaveBeenCalledWith('player1', 1, 4);
   });
 });

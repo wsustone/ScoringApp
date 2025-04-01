@@ -1,6 +1,12 @@
 import { Table, TableBody, TableCell, TableHead, TableRow, Paper, Box, Typography } from '@mui/material';
 import { Player } from './PlayerForm';
-import { GolfHole } from '../types/game';
+
+interface GolfHole {
+  id: string;
+  holeNumber: number;
+  par: number;
+  scoringIndex: number;
+}
 
 interface ScorecardProps {
   holes: GolfHole[];
@@ -10,13 +16,13 @@ interface ScorecardProps {
 }
 
 export const Scorecard = ({ holes, players, scores, onScoreChange }: ScorecardProps) => {
-  const frontNine = holes.filter(h => h.number <= 9);
-  const backNine = holes.filter(h => h.number > 9);
+  const frontNine = holes.filter(h => h.holeNumber <= 9);
+  const backNine = holes.filter(h => h.holeNumber > 9);
 
   const calculateTotal = (playerId: string, holes: GolfHole[]) => {
     return holes.reduce((total, hole) => {
-      const score = scores[playerId]?.[hole.number];
-      return total + (score || 0);
+      const score = scores[playerId]?.[hole.holeNumber];
+      return total + (score ?? 0);
     }, 0);
   };
 
@@ -33,14 +39,14 @@ export const Scorecard = ({ holes, players, scores, onScoreChange }: ScorecardPr
             <TableRow>
               <TableCell>Player</TableCell>
               {frontNine.map(hole => (
-                <TableCell key={hole.number} align="center">{hole.number}</TableCell>
+                <TableCell key={hole.id} align="center">{hole.holeNumber}</TableCell>
               ))}
               <TableCell align="center">Total</TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Par</TableCell>
               {frontNine.map(hole => (
-                <TableCell key={hole.number} align="center">{hole.par}</TableCell>
+                <TableCell key={hole.id} align="center">{hole.par}</TableCell>
               ))}
               <TableCell align="center">{calculateParTotal(frontNine)}</TableCell>
             </TableRow>
@@ -50,37 +56,41 @@ export const Scorecard = ({ holes, players, scores, onScoreChange }: ScorecardPr
               <TableRow key={player.id}>
                 <TableCell>{player.name}</TableCell>
                 {frontNine.map(hole => (
-                  <TableCell key={hole.number} align="center">
+                  <TableCell key={hole.id} align="center">
                     <Box
                       component="input"
                       type="number"
                       min="1"
                       max="20"
-                      value={scores[player.id]?.[hole.number] || ''}
+                      value={scores[player.id]?.[hole.holeNumber] ?? ''}
                       onChange={(e) => {
                         const value = e.target.value ? parseInt(e.target.value, 10) : null;
                         if (value !== null && (value < 1 || value > 20)) return;
-                        onScoreChange(player.id, hole.number, value);
+                        onScoreChange(player.id, hole.holeNumber, value);
                       }}
                       sx={{
                         width: '40px',
-                        textAlign: 'center',
                         border: '1px solid',
-                        borderColor: 'grey.400',
+                        borderColor: 'divider',
                         borderRadius: '4px',
                         padding: '4px',
                         backgroundColor: 'background.paper',
-                        color: scores[player.id]?.[hole.number] && hole.par
-                          ? scores[player.id]?.[hole.number] < hole.par 
+                        color: (scores[player.id]?.[hole.holeNumber] ?? null) !== null
+                          ? scores[player.id]?.[hole.holeNumber]! < hole.par
                             ? 'error.main'
-                            : scores[player.id]?.[hole.number] === hole.par 
+                            : scores[player.id]?.[hole.holeNumber] === hole.par
                               ? 'primary.main'
                               : 'text.primary'
                           : 'text.primary',
-                        '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
-                          display: 'none'
+                        textAlign: 'center',
+                        '&::-webkit-inner-spin-button': {
+                          WebkitAppearance: 'none',
+                          margin: 0,
                         },
-                        appearance: 'textfield'
+                        '&::-webkit-outer-spin-button': {
+                          WebkitAppearance: 'none',
+                          margin: 0,
+                        },
                       }}
                     />
                   </TableCell>
@@ -93,22 +103,24 @@ export const Scorecard = ({ holes, players, scores, onScoreChange }: ScorecardPr
       </Paper>
 
       <Typography variant="h6" gutterBottom>Back Nine</Typography>
-      <Paper sx={{ mb: 4, overflowX: 'auto' }}>
+      <Paper sx={{ overflowX: 'auto' }}>
         <Table size="small">
           <TableHead>
             <TableRow>
               <TableCell>Player</TableCell>
               {backNine.map(hole => (
-                <TableCell key={hole.number} align="center">{hole.number}</TableCell>
+                <TableCell key={hole.id} align="center">{hole.holeNumber}</TableCell>
               ))}
               <TableCell align="center">Total</TableCell>
+              <TableCell align="center">Total Score</TableCell>
             </TableRow>
             <TableRow>
               <TableCell>Par</TableCell>
               {backNine.map(hole => (
-                <TableCell key={hole.number} align="center">{hole.par}</TableCell>
+                <TableCell key={hole.id} align="center">{hole.par}</TableCell>
               ))}
               <TableCell align="center">{calculateParTotal(backNine)}</TableCell>
+              <TableCell align="center">{calculateParTotal(holes)}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -116,70 +128,45 @@ export const Scorecard = ({ holes, players, scores, onScoreChange }: ScorecardPr
               <TableRow key={player.id}>
                 <TableCell>{player.name}</TableCell>
                 {backNine.map(hole => (
-                  <TableCell key={hole.number} align="center">
+                  <TableCell key={hole.id} align="center">
                     <Box
                       component="input"
                       type="number"
                       min="1"
                       max="20"
-                      value={scores[player.id]?.[hole.number] || ''}
+                      value={scores[player.id]?.[hole.holeNumber] ?? ''}
                       onChange={(e) => {
                         const value = e.target.value ? parseInt(e.target.value, 10) : null;
                         if (value !== null && (value < 1 || value > 20)) return;
-                        onScoreChange(player.id, hole.number, value);
+                        onScoreChange(player.id, hole.holeNumber, value);
                       }}
                       sx={{
                         width: '40px',
-                        textAlign: 'center',
                         border: '1px solid',
-                        borderColor: 'grey.400',
+                        borderColor: 'divider',
                         borderRadius: '4px',
                         padding: '4px',
                         backgroundColor: 'background.paper',
-                        color: scores[player.id]?.[hole.number] && hole.par
-                          ? scores[player.id]?.[hole.number] < hole.par 
+                        color: (scores[player.id]?.[hole.holeNumber] ?? null) !== null
+                          ? scores[player.id]?.[hole.holeNumber]! < hole.par
                             ? 'error.main'
-                            : scores[player.id]?.[hole.number] === hole.par 
+                            : scores[player.id]?.[hole.holeNumber] === hole.par
                               ? 'primary.main'
                               : 'text.primary'
                           : 'text.primary',
-                        '&::-webkit-inner-spin-button, &::-webkit-outer-spin-button': {
-                          display: 'none'
+                        textAlign: 'center',
+                        '&::-webkit-inner-spin-button': {
+                          WebkitAppearance: 'none',
+                          margin: 0,
                         },
-                        appearance: 'textfield'
+                        '&::-webkit-outer-spin-button': {
+                          WebkitAppearance: 'none',
+                          margin: 0,
+                        },
                       }}
                     />
                   </TableCell>
                 ))}
-                <TableCell align="center">{calculateTotal(player.id, backNine)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Paper>
-
-      <Typography variant="h6" gutterBottom>Total</Typography>
-      <Paper sx={{ overflowX: 'auto' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Player</TableCell>
-              <TableCell align="center">Front</TableCell>
-              <TableCell align="center">Back</TableCell>
-              <TableCell align="center">Total</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            <TableRow>
-              <TableCell>Par</TableCell>
-              <TableCell align="center">{calculateParTotal(frontNine)}</TableCell>
-              <TableCell align="center">{calculateParTotal(backNine)}</TableCell>
-              <TableCell align="center">{calculateParTotal(holes)}</TableCell>
-            </TableRow>
-            {players.map(player => (
-              <TableRow key={player.id}>
-                <TableCell>{player.name}</TableCell>
-                <TableCell align="center">{calculateTotal(player.id, frontNine)}</TableCell>
                 <TableCell align="center">{calculateTotal(player.id, backNine)}</TableCell>
                 <TableCell align="center">{calculateTotal(player.id, holes)}</TableCell>
               </TableRow>

@@ -5,12 +5,18 @@ export const GET_GOLF_COURSES = gql`
     golfCourses {
       id
       name
-      location
-      teeSettings {
+      tees {
         id
         name
+        gender
         courseRating
         slopeRating
+        holes {
+          id
+          holeNumber
+          par
+          scoringIndex
+        }
       }
     }
   }
@@ -21,18 +27,17 @@ export const GET_GOLF_COURSE = gql`
     golfCourse(id: $id) {
       id
       name
-      location
-      teeSettings {
+      tees {
         id
         name
+        gender
         courseRating
         slopeRating
         holes {
           id
-          number
+          holeNumber
           par
-          strokeIndex
-          distance
+          scoringIndex
         }
       }
     }
@@ -43,11 +48,11 @@ export const GET_COURSE_HOLES = gql`
   query GetCourseHoles($courseId: ID!) {
     golfCourse(id: $courseId) {
       id
-      teeSettings {
+      tees {
         holes {
-          number
+          holeNumber
           par
-          strokeIndex
+          scoringIndex
         }
       }
     }
@@ -64,20 +69,17 @@ export const GET_ROUND = gql`
       status
       players {
         id
+        roundId
         playerId
         name
         handicap
         teeId
       }
-      holes {
-        id
-        number
-        par
-      }
       scores {
         id
-        playerId
+        roundId
         holeId
+        playerId
         score
         timestamp
       }
@@ -89,11 +91,24 @@ export const GET_ACTIVE_ROUNDS = gql`
   query GetActiveRounds {
     getActiveRounds {
       id
-      courseName
       startTime
+      courseName
+      status
       players {
+        id
+        roundId
+        playerId
         name
         handicap
+        teeId
+      }
+      scores {
+        id
+        roundId
+        holeId
+        playerId
+        score
+        timestamp
       }
     }
   }
@@ -102,16 +117,12 @@ export const GET_ACTIVE_ROUNDS = gql`
 export const START_ROUND = gql`
   mutation StartRound($input: StartRoundInput!) {
     startRound(input: $input) {
-      id
-      startTime
-      courseName
-      status
+      courseId
       players {
         id
-        playerId
         name
         handicap
-        teeId
+        teeID
       }
     }
   }
@@ -121,6 +132,15 @@ export const UPDATE_ROUND = gql`
   mutation UpdateRound($input: UpdateRoundInput!) {
     updateRound(input: $input) {
       id
+      courseId
+      courseName
+      status
+      players {
+        id
+        name
+        handicap
+        teeID
+      }
       scores {
         id
         playerId
@@ -144,24 +164,6 @@ export const UPDATE_SCORE = gql`
       holeNumber: $holeNumber
       playerId: $playerId
       score: $score
-    )
-  }
-`;
-
-export const UPDATE_BANKER_SETUP = gql`
-  mutation UpdateBankerSetup(
-    $roundId: ID!
-    $holeNumber: Int!
-    $bankerId: String
-    $dots: Int!
-    $doubles: [BankerDoubleInput!]!
-  ) {
-    updateBankerSetup(
-      roundId: $roundId
-      holeNumber: $holeNumber
-      bankerId: $bankerId
-      dots: $dots
-      doubles: $doubles
     )
   }
 `;

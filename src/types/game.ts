@@ -1,9 +1,8 @@
-export interface GolfHole {
+export interface Hole {
   id: string;
-  number: number;
+  roundId: string;
+  holeNumber: number;
   par: number;
-  strokeIndex: number;
-  distance?: number;
 }
 
 export interface GolfTee {
@@ -12,7 +11,7 @@ export interface GolfTee {
   gender: string;
   courseRating: number;
   slopeRating: number;
-  holes?: GolfHole[];
+  holes?: Hole[];
 }
 
 export interface GolfCourse {
@@ -22,28 +21,32 @@ export interface GolfCourse {
   tees: GolfTee[];
 }
 
-export interface GameOptions {
-  minDots: number;
-  maxDots: number;
-  dotValue: number;
-  doubleBirdieBets: boolean;
-  useGrossBirdies: boolean;
-  par3Triples: boolean;
-}
-
-export const defaultGameOptions: GameOptions = {
-  minDots: 1,
-  maxDots: 3,
-  dotValue: 0.25,
-  doubleBirdieBets: false,
-  useGrossBirdies: true,
-  par3Triples: true
-};
-
-export interface HoleSetup {
-  bankerId: string;
-  dots: number;
-  doubles: { [key: string]: boolean };
-}
-
 export type GameType = 'banker' | 'mrpar' | 'wolf';
+
+export interface Round {
+  id: string;
+  startTime: string;
+  endTime?: string;
+  courseName: string;
+  status: string;
+  players: PlayerRound[];
+  scores: Score[];
+}
+
+export interface PlayerRound {
+  id: string;
+  roundId: string;
+  playerId: string;
+  playerName: string;
+  handicap: number;
+  teeId: string;
+}
+
+export interface Score {
+  id: string;
+  roundId: string;
+  holeId: string;
+  playerId: string;
+  score: number | null;
+  timestamp: string;
+}
