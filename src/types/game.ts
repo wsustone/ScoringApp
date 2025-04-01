@@ -50,6 +50,7 @@ export interface BankerHoleData {
   points: number;
   dots: number;
   holeNumber: number;
+  doubles: string[]; // Array of player IDs who doubled on this hole
 }
 
 export interface BankerGame {

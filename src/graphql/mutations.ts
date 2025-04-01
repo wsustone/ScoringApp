@@ -1,19 +1,31 @@
 import { gql } from '@apollo/client';
 
 export const START_ROUND = gql`
-  mutation StartRound($courseName: String!, $players: [PlayerInput!]!) {
-    startRound(courseName: $courseName, players: $players) {
+  mutation StartRound($input: StartRoundInput!) {
+    startRound(input: $input) {
       id
-      startTime
-      courseName
-      status
+      courseId
+      date
       players {
         id
-        roundId
-        playerId
-        playerName
-        handicap
+        name
         teeId
+      }
+      games {
+        id
+        type
+        enabled
+        dotValue
+        maxDots
+        bankerData {
+          holes {
+            holeNumber
+            winner
+            points
+            dots
+            doubles
+          }
+        }
       }
     }
   }

@@ -1,0 +1,65 @@
+Main dashboard:
+Here is each tab and what should be in the tab.
+
+* Course Selection [IMPLEMENTED ✅]
+** contains only drop down list of courses from ScoringEngine GraphQL
+** Currently shows all available courses with number of tees
+** Selected course is required before showing game settings
+
+* Add players [IMPLEMENTED ✅]
+** Allow for adding players with following data:
+*** Name, Handicap (HCP), Tees they will play
+** StartRound call to save this Round in the database
+** Current implementation:
+*** Player form with name, handicap, and tee selection
+*** Database integration pending
+
+* Game Settings [PARTIALLY IMPLEMENTED ⚠️]
+** Have a drop down of all games available
+*** As games are selected and applied to the round show the options for that game that need to be filled in and saved to the database for this round
+*** Allow for applying options by user
+** Current implementation:
+*** Game type selection (Banker, Nassau, Skins)
+*** Game options not yet implemented
+*** Database integration pending
+
+* HoleByHole [NOT IMPLEMENTED ❌]
+** Hole by hole view with next/previous buttons
+** Allow for entering score for each player
+** For each game include any holebyhole information. Example: BankerGame would allow for selecting banker for that hole, number of dots for this hole and any player doubled button.
+** Need a way to update round in database as user goes to next hole.
+
+* Scorecard [MOSTLY IMPLEMENTED ⚠️]
+** Shows a Golf scorecard for the selected course, each player in rows where players have name and hdcp shown.
+** Need to show Hole number, Hole par, Hole stroke index (SI)
+** Each hole will show * for how many strokes a member gets on each hole based on HCP. (hardest hole is scoring index 1 so someone with a HCP of 10 would get a stroke on SI holes 1-10. Someone with HCP of 40 would get 3 strokes on the 4 hardest holes and 3 on the rest of the holes)
+** Each score both Gross (entered in by the user) and Net (gross score - strokes for this hole). Gross in the field and Net below
+** Scorecard will show In to add front 9 holes. Out back 9 holes and total. Net scores show below each Gross score.
+** Scores under par will be red, scores equal to par will be blue and scores over par will be black.
+** Below the scorecard we need a results area for each applied game that shows holebyhole scoring for each game.
+** a way to end the round
+** a way to discord the round which would delete all records in the database for this round.
+** Current implementation:
+*** ✅ Basic scorecard layout with holes and par
+*** ✅ Score entry for each player with validation
+*** ✅ Handicap strokes display with asterisks
+*** ✅ Net scoring calculation and display
+*** ✅ Score coloring based on par
+*** ✅ Front nine, back nine, and total calculations
+*** ✅ End/Discard round buttons added
+*** ❌ Game-specific results not yet implemented
+*** ❌ Database integration pending
+
+Next Steps:
+1. ✅ Fix course loading and selection
+2. ✅ Implement tee selection in player form
+3. Add game options configuration
+4. Build hole-by-hole view
+5. ✅ Complete scorecard features (handicap, net scores, coloring)
+6. Add database integration for round management
+7. Implement game-specific scoring and results
+
+Legend:
+✅ = Completed
+⚠️ = Partially Implemented
+❌ = Not Implemented

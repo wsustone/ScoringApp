@@ -76,7 +76,7 @@ export const GET_ROUND = gql`
         playerId
         name
         handicap
-        teeId
+        teeID
       }
       scores {
         id
@@ -95,6 +95,7 @@ export const GET_ACTIVE_ROUNDS = gql`
     getActiveRounds {
       id
       startTime
+      endTime
       courseName
       status
       players {

@@ -271,7 +271,7 @@ export const GameComponent = ({
             <Typography variant="h6" gutterBottom>Added Players:</Typography>
             {players.map((player, index) => (
               <Typography key={index}>
-                {player.name} - {player.tee.name}
+                {player.name} ({player.tee?.name || 'No tee selected'})
               </Typography>
             ))}
           </Box>

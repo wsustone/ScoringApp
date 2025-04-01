@@ -15,7 +15,8 @@ export interface Player {
   id: string;
   name: string;
   handicap: number;
-  tee: ExtendedGolfTee;
+  teeId: string;
+  tee?: ExtendedGolfTee;
 }
 
 interface PlayerFormProps {
@@ -37,6 +38,7 @@ export const PlayerForm = ({ onSubmit, onAddPlayer, availableTees }: PlayerFormP
       id: `${name}-${Date.now()}`,
       name,
       handicap: parseFloat(handicap),
+      teeId: selectedTee.id,
       tee: selectedTee
     };
 
