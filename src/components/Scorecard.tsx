@@ -1,44 +1,43 @@
+import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableRow, Paper, Box, Typography } from '@mui/material';
 import { Player } from './PlayerForm';
+import { Hole, GolfTee } from '../types/game';
 import { calculateHandicapStrokes } from '../utils/handicapScoring';
 
-interface GolfHole {
-  id: string;
-  holeNumber: number;
-  par: number;
+interface HoleWithIndex extends Omit<Hole, 'roundId'> {
   scoringIndex: number;
 }
 
-interface GolfTee {
-  id: string;
-  name: string;
-  gender: string;
-  courseRating: number;
-  slopeRating: number;
-  holes: GolfHole[];
+interface ExtendedGolfTee extends Omit<GolfTee, 'holes'> {
+  holes: HoleWithIndex[];
 }
 
 interface ScorecardProps {
   players: Player[];
   scores: { [key: string]: { [key: number]: number | null } };
   onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
-  playerTees: { [key: string]: GolfTee };
+  playerTees: { [key: string]: ExtendedGolfTee };
 }
 
-export const Scorecard = ({ players, scores, onScoreChange, playerTees }: ScorecardProps) => {
+export const Scorecard: React.FC<ScorecardProps> = ({
+  players,
+  scores,
+  onScoreChange,
+  playerTees,
+}) => {
   const firstTee = Object.values(playerTees)[0];
   if (!firstTee) return null;
 
-  const getFrontNine = (holes: GolfHole[]) => 
+  const getFrontNine = (holes: HoleWithIndex[]) => 
     [...holes].filter(h => h.holeNumber <= 9).sort((a, b) => a.holeNumber - b.holeNumber);
 
-  const getBackNine = (holes: GolfHole[]) => 
+  const getBackNine = (holes: HoleWithIndex[]) => 
     [...holes].filter(h => h.holeNumber > 9).sort((a, b) => a.holeNumber - b.holeNumber);
 
   const frontNine = getFrontNine(firstTee.holes);
   const backNine = getBackNine(firstTee.holes);
 
-  const renderScoreInput = (player: Player, hole: GolfHole, showNet: boolean = false) => {
+  const renderScoreInput = (player: Player, hole: HoleWithIndex, showNet: boolean = false) => {
     const score = scores[player.id]?.[hole.holeNumber];
     const tee = playerTees[player.id];
     if (!tee) return null;
@@ -121,8 +120,8 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees }: Scorec
     );
   };
 
-  const renderSection = (holes: GolfHole[], isBackNine: boolean = false) => {
-    const calculateNetTotal = (player: Player, holes: GolfHole[]) => {
+  const renderSection = (holes: HoleWithIndex[], isBackNine: boolean = false) => {
+    const calculateNetTotal = (player: Player, holes: HoleWithIndex[]) => {
       let total = 0;
       let validScores = false;
       
@@ -138,7 +137,7 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees }: Scorec
       return validScores ? total : null;
     };
 
-    const calculateGrossTotal = (player: Player, holes: GolfHole[]) => {
+    const calculateGrossTotal = (player: Player, holes: HoleWithIndex[]) => {
       let total = 0;
       let validScores = false;
 
