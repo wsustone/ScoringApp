@@ -49,7 +49,10 @@ export const GET_COURSE_HOLES = gql`
     golfCourse(id: $courseId) {
       id
       tees {
+        id
+        name
         holes {
+          id
           holeNumber
           par
           scoringIndex

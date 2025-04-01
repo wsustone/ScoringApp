@@ -9,3 +9,6 @@ This directory contains the official rules for various golf games supported by t
 
 ## Purpose
 These documents serve as the source of truth for game rules implementation in the application. Any changes to game mechanics should be reflected here first and then implemented in the code.
+
+## Game Sources
+Adapted from [MyScorecard.com Knowledge Center](https://www.myscorecard.com/cgi-bin/knowledgecenter.pl)

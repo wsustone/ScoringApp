@@ -1,17 +1,29 @@
 export interface Hole {
   id: string;
   roundId: string;
+  number: number;
+  par: number;
+  distance: number;
+  strokeIndex: number;
+}
+
+export interface GolfHole {
+  id: string;
   holeNumber: number;
   par: number;
+  scoringIndex: number;
 }
 
 export interface GolfTee {
   id: string;
   name: string;
-  gender: string;
   courseRating: number;
   slopeRating: number;
-  holes?: Hole[];
+  holes: GolfHole[];
+}
+
+export interface ExtendedGolfTee extends Omit<GolfTee, 'holes'> {
+  holes: Hole[];
 }
 
 export interface GolfCourse {
@@ -21,7 +33,79 @@ export interface GolfCourse {
   tees: GolfTee[];
 }
 
-export type GameType = 'banker' | 'mrpar' | 'wolf' | 'nassau' | 'skins';
+export type GameType = 'banker' | 'nassau' | 'skins';
+
+export interface HoleData {
+  winner: string | null;
+  points: number;
+}
+
+export interface MatchData {
+  winner: string | null;
+  points: number;
+}
+
+export interface BankerHoleData {
+  winner: string | null;
+  points: number;
+  dots: number;
+  holeNumber: number;
+}
+
+export interface BankerGame {
+  type: 'banker';
+  id: string;
+  roundId: string;
+  minDots: number;
+  maxDots: number;
+  dotValue: number;
+  doubleBirdieBets: boolean;
+  useGrossBirdies: boolean;
+  par3Triples: boolean;
+  bankerData: {
+    holes: BankerHoleData[];
+  };
+}
+
+export interface NassauGame {
+  type: 'nassau';
+  id: string;
+  roundId: string;
+  nassauData: {
+    frontNine: MatchData;
+    backNine: MatchData;
+    match: MatchData;
+  };
+}
+
+export interface SkinsGame {
+  type: 'skins';
+  id: string;
+  roundId: string;
+  skinsData: {
+    holes: MatchData[];
+  };
+}
+
+export type Game = BankerGame | NassauGame | SkinsGame;
+
+export interface GameSettings {
+  banker: {
+    enabled: boolean;
+    points: number;
+  };
+  nassau: {
+    enabled: boolean;
+    frontNine: number;
+    backNine: number;
+    match: number;
+  };
+  skins: {
+    enabled: boolean;
+    carryover: boolean;
+    pointsPerSkin: number;
+  };
+}
 
 export interface Round {
   id: string;
@@ -50,56 +134,3 @@ export interface Score {
   score: number | null;
   timestamp: string;
 }
-
-export interface BankerHoleData {
-  holeId: string;
-  bankerId: string;
-  dots: number;
-  doubles: BankerPlayerDouble[];
-}
-
-export interface BankerPlayerDouble {
-  playerId: string;
-  isDoubled: boolean;
-}
-
-export interface BankerGameOptions {
-  pointsPerDollar: number;
-  carryOver: boolean;
-  doubleBirdieBets: boolean;
-  useGrossBirdies: boolean;
-  par3Triples: boolean;
-  holeData: BankerHoleData[];
-}
-
-export interface MrParGameOptions {
-  pointsPerHole: number;
-  allowTies: boolean;
-}
-
-export interface WolfGameOptions {
-  pointsPerHole: number;
-  allowLoneWolf: boolean;
-}
-
-export interface NassauGameOptions {
-  frontNineAmount: number;
-  backNineAmount: number;
-  matchAmount: number;
-  autoPress: boolean;
-  pressEvery: number;
-  carryOver: boolean;
-}
-
-export interface SkinsGameOptions {
-  skinAmount: number;
-  carryOver: boolean;
-}
-
-export type GameOptions = {
-  banker: BankerGameOptions;
-  mrpar: MrParGameOptions;
-  wolf: WolfGameOptions;
-  nassau: NassauGameOptions;
-  skins: SkinsGameOptions;
-};

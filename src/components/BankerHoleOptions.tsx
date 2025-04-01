@@ -1,111 +1,79 @@
-import React from 'react';
-import { Box, Grid, FormControl, InputLabel, Select, MenuItem, TextField, Switch, FormControlLabel, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, FormControl, InputLabel, Select, MenuItem, TextField, SelectChangeEvent } from '@mui/material';
 import { Player } from './PlayerForm';
-import { BankerHoleData } from '../types/game';
+import { HoleData } from '../types/game';
 
 interface BankerHoleOptionsProps {
   players: Player[];
-  currentHole: number;
-  holeId: string;
-  bankerData: BankerHoleData | null;
-  onBankerDataChange: (data: BankerHoleData) => void;
+  holeNumber: number;
+  currentData: HoleData;
+  onDataChange: (data: HoleData) => void;
 }
 
 export const BankerHoleOptions: React.FC<BankerHoleOptionsProps> = ({
   players,
-  currentHole,
-  holeId,
-  bankerData,
-  onBankerDataChange,
+  holeNumber,
+  currentData,
+  onDataChange,
 }) => {
-  const handleBankerChange = (bankerId: string) => {
-    onBankerDataChange({
-      holeId,
-      bankerId,
-      dots: bankerData?.dots || 1,
-      doubles: players.map(p => ({
-        playerId: p.id,
-        isDoubled: bankerData?.doubles?.find(d => d.playerId === p.id)?.isDoubled || false
-      })),
-    });
+  const [points, setPoints] = useState<number>(currentData.points);
+  const [winner, setWinner] = useState<string | null>(currentData.winner);
+
+  const handlePointsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newPoints = parseInt(event.target.value, 10);
+    if (newPoints > 0) {
+      setPoints(newPoints);
+      if (winner) {
+        onDataChange({
+          winner,
+          points: newPoints,
+        });
+      }
+    }
   };
 
-  const handleDotsChange = (dots: number) => {
-    if (!bankerData?.bankerId) return;
-    onBankerDataChange({
-      ...bankerData,
-      dots,
-    });
-  };
-
-  const handleDoubleChange = (playerId: string, isDoubled: boolean) => {
-    if (!bankerData?.bankerId) return;
-    const doubles = bankerData.doubles.map(d => 
-      d.playerId === playerId ? { ...d, isDoubled } : d
-    );
-    onBankerDataChange({
-      ...bankerData,
-      doubles,
+  const handleWinnerChange = (event: SelectChangeEvent<string>) => {
+    const newWinner = event.target.value;
+    setWinner(newWinner);
+    onDataChange({
+      winner: newWinner,
+      points,
     });
   };
 
   return (
-    <Box sx={{ mt: 2, p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <FormControl fullWidth>
-            <InputLabel id="banker-select-label">Banker for Hole {currentHole}</InputLabel>
-            <Select
-              labelId="banker-select-label"
-              value={bankerData?.bankerId || ''}
-              onChange={(e) => handleBankerChange(e.target.value)}
-              label={`Banker for Hole ${currentHole}`}
-            >
-              {players.map((player) => (
-                <MenuItem key={player.id} value={player.id}>
-                  {player.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
-        
-        {bankerData?.bankerId && (
-          <>
-            <Grid item xs={12}>
-              <TextField
-                type="number"
-                label="Points for this Hole"
-                value={bankerData.dots}
-                onChange={(e) => handleDotsChange(Number(e.target.value))}
-                fullWidth
-                InputProps={{ inputProps: { min: 1, max: 10 } }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Typography variant="subtitle1" gutterBottom>
-                Double Options
-              </Typography>
-              <Grid container spacing={1}>
-                {players.map((player) => (
-                  <Grid item xs={12} sm={6} key={player.id}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={bankerData.doubles.find(d => d.playerId === player.id)?.isDoubled || false}
-                          onChange={(e) => handleDoubleChange(player.id, e.target.checked)}
-                        />
-                      }
-                      label={`${player.name} ${player.id === bankerData.bankerId ? '(Banker)' : ''}`}
-                    />
-                  </Grid>
-                ))}
-              </Grid>
-            </Grid>
-          </>
-        )}
-      </Grid>
+    <Box sx={{ mb: 3 }}>
+      <Typography variant="h6" gutterBottom>
+        Banker Options - Hole {holeNumber}
+      </Typography>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+        <FormControl sx={{ minWidth: 200 }}>
+          <InputLabel id={`banker-winner-label-${holeNumber}`}>Winner</InputLabel>
+          <Select
+            labelId={`banker-winner-label-${holeNumber}`}
+            value={winner || ''}
+            onChange={handleWinnerChange}
+            label="Winner"
+          >
+            <MenuItem value="">
+              <em>None</em>
+            </MenuItem>
+            {players.map((player) => (
+              <MenuItem key={player.id} value={player.id}>
+                {player.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <TextField
+          type="number"
+          label="Points"
+          value={points}
+          onChange={handlePointsChange}
+          inputProps={{ min: 1 }}
+          sx={{ width: 100 }}
+        />
+      </Box>
     </Box>
   );
 };

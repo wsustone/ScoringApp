@@ -1,352 +1,282 @@
-import React, { useState } from 'react';
-import { Box, Grid, FormControl, InputLabel, Select, MenuItem, SelectChangeEvent, Typography, Divider, TextField, Switch, FormControlLabel } from '@mui/material';
-import { Player } from './PlayerForm';
-import { GameType, GameOptions } from '../types/game';
+import { useState } from 'react';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  FormGroup,
+  FormHelperText,
+  Grid,
+  Switch,
+  Typography,
+  Slider,
+} from '@mui/material';
+import { PlayerForm, Player } from './PlayerForm';
+import { GameType, ExtendedGolfTee, BankerGame } from '../types/game';
 
-interface GameProps {
+interface GameComponentProps {
   players: Player[];
-  selectedGames: GameType[];
   onGameChange: (games: GameType[]) => void;
+  onAddPlayer: (player: Player) => void;
+  availableTees: ExtendedGolfTee[];
 }
 
-export const Game: React.FC<GameProps> = ({ players, selectedGames, onGameChange }) => {
-  const [gameOptions, setGameOptions] = useState<GameOptions>({
-    banker: {
-      pointsPerDollar: 1,
-      carryOver: true,
-      doubleBirdieBets: true,
-      useGrossBirdies: false,
-      par3Triples: false,
-      holeData: []
-    },
-    mrpar: {
-      pointsPerHole: 1,
-      allowTies: false,
-    },
-    wolf: {
-      pointsPerHole: 2,
-      allowLoneWolf: true,
-    },
-    nassau: {
-      frontNineAmount: 2,
-      backNineAmount: 2,
-      matchAmount: 2,
-      autoPress: true,
-      pressEvery: 2,
-      carryOver: true,
-    },
-    skins: {
-      skinAmount: 1,
-      carryOver: true,
-    }
-  });
+interface GameOption {
+  type: GameType;
+  label: string;
+  description: string;
+  defaultSettings: GameSettings;
+}
 
-  const handleGameChange = (event: SelectChangeEvent<GameType[]>) => {
-    const value = event.target.value;
-    const games = typeof value === 'string' ? [value as GameType] : value as GameType[];
-    onGameChange(games);
+interface GameSettings {
+  enabled: boolean;
+  options: {
+    [key: string]: any;
+  };
+}
+
+const defaultBankerGame = (): Omit<BankerGame, 'id' | 'roundId'> => ({
+  type: 'banker',
+  minDots: 1,
+  maxDots: 4,
+  dotValue: 1,
+  doubleBirdieBets: true,
+  useGrossBirdies: false,
+  par3Triples: false,
+  bankerData: {
+    holes: []
+  }
+});
+
+const GAME_OPTIONS: GameOption[] = [
+  {
+    type: 'banker',
+    label: 'Banker',
+    description: 'One player takes on all others. Banker rotates each hole.',
+    defaultSettings: {
+      enabled: false,
+      options: defaultBankerGame()
+    }
+  },
+  {
+    type: 'nassau',
+    label: 'Nassau',
+    description: 'Three separate bets: front 9, back 9, and total match.',
+    defaultSettings: {
+      enabled: false,
+      options: {
+        betAmount: 2,
+        autoPress: true,
+        pressEvery: 2
+      }
+    }
+  },
+  {
+    type: 'skins',
+    label: 'Skins',
+    description: 'Each hole is a separate bet. Winner takes all.',
+    defaultSettings: {
+      enabled: false,
+      options: {
+        carryOver: true,
+        valuePerSkin: 1
+      }
+    }
+  }
+];
+
+export const GameComponent = ({
+  players,
+  onGameChange,
+  onAddPlayer,
+  availableTees
+}: GameComponentProps) => {
+  const [gameSettings, setGameSettings] = useState<{ [key: string]: GameSettings }>(
+    GAME_OPTIONS.reduce((acc, option) => ({
+      ...acc,
+      [option.type]: option.defaultSettings
+    }), {})
+  );
+
+  const [showBankerSettings, setShowBankerSettings] = useState(false);
+
+  const handleGameToggle = (gameType: GameType) => {
+    const newSettings = {
+      ...gameSettings,
+      [gameType]: {
+        ...gameSettings[gameType],
+        enabled: !gameSettings[gameType].enabled
+      }
+    };
+    setGameSettings(newSettings);
+
+    const enabledGames = GAME_OPTIONS
+      .filter(option => newSettings[option.type].enabled)
+      .map(option => option.type);
+    onGameChange(enabledGames);
   };
 
-  const handleOptionChange = <T extends keyof GameOptions>(
-    game: T,
-    option: keyof GameOptions[T],
-    value: any
+  const handleBankerSettingsOpen = () => {
+    setShowBankerSettings(true);
+  };
+
+  const handleBankerSettingsClose = () => {
+    setShowBankerSettings(false);
+  };
+
+  const handleBankerSettingChange = (setting: keyof Omit<BankerGame, 'id' | 'roundId' | 'type' | 'bankerData'>) => (
+    _: Event,
+    value: number | boolean
   ) => {
-    setGameOptions(prev => ({
-      ...prev,
-      [game]: {
-        ...prev[game],
-        [option]: value,
-      },
-    }));
-  };
-
-  const gameOptionsList: { value: GameType; label: string }[] = [
-    { value: 'banker', label: 'Banker' },
-    { value: 'mrpar', label: 'Mr. Par' },
-    { value: 'wolf', label: 'Wolf' },
-    { value: 'nassau', label: 'Nassau' },
-    { value: 'skins', label: 'Skins' },
-  ];
-
-  const renderGameOptions = (gameType: GameType) => {
-    switch (gameType) {
-      case 'banker':
-        return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6">Banker Options</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  type="number"
-                  label="Points per Dollar"
-                  value={gameOptions.banker.pointsPerDollar}
-                  onChange={(e) => handleOptionChange('banker', 'pointsPerDollar', Number(e.target.value))}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.banker.carryOver}
-                      onChange={(e) => handleOptionChange('banker', 'carryOver', e.target.checked)}
-                    />
-                  }
-                  label="Carry Over Points"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.banker.doubleBirdieBets}
-                      onChange={(e) => handleOptionChange('banker', 'doubleBirdieBets', e.target.checked)}
-                    />
-                  }
-                  label="Double Birdie Bets"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.banker.useGrossBirdies}
-                      onChange={(e) => handleOptionChange('banker', 'useGrossBirdies', e.target.checked)}
-                    />
-                  }
-                  label="Use Gross Birdies"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.banker.par3Triples}
-                      onChange={(e) => handleOptionChange('banker', 'par3Triples', e.target.checked)}
-                    />
-                  }
-                  label="Par 3 Triples"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      case 'mrpar':
-        return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6">Mr. Par Options</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  type="number"
-                  label="Points per Hole"
-                  value={gameOptions.mrpar.pointsPerHole}
-                  onChange={(e) => handleOptionChange('mrpar', 'pointsPerHole', Number(e.target.value))}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.mrpar.allowTies}
-                      onChange={(e) => handleOptionChange('mrpar', 'allowTies', e.target.checked)}
-                    />
-                  }
-                  label="Allow Ties"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      case 'wolf':
-        return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6">Wolf Options</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  type="number"
-                  label="Points per Hole"
-                  value={gameOptions.wolf.pointsPerHole}
-                  onChange={(e) => handleOptionChange('wolf', 'pointsPerHole', Number(e.target.value))}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.wolf.allowLoneWolf}
-                      onChange={(e) => handleOptionChange('wolf', 'allowLoneWolf', e.target.checked)}
-                    />
-                  }
-                  label="Allow Lone Wolf"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      case 'nassau':
-        return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6">Nassau Options</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  type="number"
-                  label="Front Nine Amount"
-                  value={gameOptions.nassau.frontNineAmount}
-                  onChange={(e) => handleOptionChange('nassau', 'frontNineAmount', Number(e.target.value))}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  type="number"
-                  label="Back Nine Amount"
-                  value={gameOptions.nassau.backNineAmount}
-                  onChange={(e) => handleOptionChange('nassau', 'backNineAmount', Number(e.target.value))}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  type="number"
-                  label="Match Amount"
-                  value={gameOptions.nassau.matchAmount}
-                  onChange={(e) => handleOptionChange('nassau', 'matchAmount', Number(e.target.value))}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.nassau.autoPress}
-                      onChange={(e) => handleOptionChange('nassau', 'autoPress', e.target.checked)}
-                    />
-                  }
-                  label="Auto Press"
-                />
-              </Grid>
-              {gameOptions.nassau.autoPress && (
-                <Grid item xs={12}>
-                  <TextField
-                    type="number"
-                    label="Press Every"
-                    value={gameOptions.nassau.pressEvery}
-                    onChange={(e) => handleOptionChange('nassau', 'pressEvery', Number(e.target.value))}
-                    fullWidth
-                    InputProps={{ inputProps: { min: 1 } }}
-                  />
-                </Grid>
-              )}
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.nassau.carryOver}
-                      onChange={(e) => handleOptionChange('nassau', 'carryOver', e.target.checked)}
-                    />
-                  }
-                  label="Carry Over"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      case 'skins':
-        return (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6">Skins Options</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  type="number"
-                  label="Skin Amount"
-                  value={gameOptions.skins.skinAmount}
-                  onChange={(e) => handleOptionChange('skins', 'skinAmount', Number(e.target.value))}
-                  fullWidth
-                  InputProps={{ inputProps: { min: 1 } }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameOptions.skins.carryOver}
-                      onChange={(e) => handleOptionChange('skins', 'carryOver', e.target.checked)}
-                    />
-                  }
-                  label="Carry Over"
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        );
-      default:
-        return null;
-    }
+    setGameSettings({
+      ...gameSettings,
+      banker: {
+        ...gameSettings.banker,
+        options: {
+          ...gameSettings.banker.options,
+          [setting]: value
+        }
+      }
+    });
   };
 
   return (
     <Box>
+      <Typography variant="h5" gutterBottom>Game Selection</Typography>
       <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <FormControl fullWidth>
-            <InputLabel id="game-types-label">Game Types</InputLabel>
-            <Select
-              labelId="game-types-label"
-              id="game-types"
-              multiple
-              value={selectedGames}
-              onChange={handleGameChange}
-              label="Game Types"
-              renderValue={(selected) => (
-                selected.map(game => gameOptionsList.find(opt => opt.value === game)?.label).join(', ')
-              )}
-            >
-              {gameOptionsList.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </Grid>
+        {GAME_OPTIONS.map(option => (
+          <Grid item xs={12} key={option.type}>
+            <Card>
+              <CardContent>
+                <FormGroup>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={gameSettings[option.type].enabled}
+                        onChange={() => handleGameToggle(option.type)}
+                      />
+                    }
+                    label={option.label}
+                  />
+                  <FormHelperText>{option.description}</FormHelperText>
+                  {option.type === 'banker' && gameSettings.banker.enabled && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={handleBankerSettingsOpen}
+                      sx={{ mt: 1 }}
+                    >
+                      Configure Banker Settings
+                    </Button>
+                  )}
+                </FormGroup>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
 
-        {selectedGames.length > 0 && (
-          <Grid item xs={12}>
+      <Dialog open={showBankerSettings} onClose={handleBankerSettingsClose}>
+        <DialogTitle>Banker Game Settings</DialogTitle>
+        <DialogContent>
+          <Box sx={{ width: 300, mt: 2 }}>
+            <Typography gutterBottom>Dots per Hole</Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <Typography>Min Dots</Typography>
+                <Slider
+                  value={gameSettings.banker.options.minDots}
+                  onChange={(event, value) => handleBankerSettingChange('minDots')(event as Event, value as number)}
+                  min={1}
+                  max={4}
+                  marks
+                  valueLabelDisplay="auto"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <Typography>Max Dots</Typography>
+                <Slider
+                  value={gameSettings.banker.options.maxDots}
+                  onChange={(event, value) => handleBankerSettingChange('maxDots')(event as Event, value as number)}
+                  min={1}
+                  max={4}
+                  marks
+                  valueLabelDisplay="auto"
+                />
+              </Grid>
+            </Grid>
+
             <Box sx={{ mt: 2 }}>
-              <Typography variant="h6" gutterBottom>
-                Selected Players
-              </Typography>
-              <Typography variant="body1" color="textSecondary">
-                {players.map(p => p.name).join(', ')}
-              </Typography>
+              <Typography gutterBottom>Dot Value ($)</Typography>
+              <Slider
+                value={gameSettings.banker.options.dotValue}
+                onChange={(event, value) => handleBankerSettingChange('dotValue')(event as Event, value as number)}
+                min={0.25}
+                max={5}
+                step={0.25}
+                marks={[
+                  { value: 0.25, label: '0.25' },
+                  { value: 1, label: '1' },
+                  { value: 2, label: '2' },
+                  { value: 5, label: '5' }
+                ]}
+                valueLabelDisplay="auto"
+              />
             </Box>
 
-            <Divider sx={{ my: 3 }} />
+            <Box sx={{ mt: 2 }}>
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={gameSettings.banker.options.doubleBirdieBets}
+                      onChange={(event) => handleBankerSettingChange('doubleBirdieBets')(event as unknown as Event, event.target.checked)}
+                    />
+                  }
+                  label="Double Birdie Bets"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={gameSettings.banker.options.useGrossBirdies}
+                      onChange={(event) => handleBankerSettingChange('useGrossBirdies')(event as unknown as Event, event.target.checked)}
+                    />
+                  }
+                  label="Use Gross Birdies"
+                />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={gameSettings.banker.options.par3Triples}
+                      onChange={(event) => handleBankerSettingChange('par3Triples')(event as unknown as Event, event.target.checked)}
+                    />
+                  }
+                  label="Par 3 Triples"
+                />
+              </FormGroup>
+            </Box>
+          </Box>
+        </DialogContent>
+      </Dialog>
 
-            {selectedGames.map((gameType) => (
-              <React.Fragment key={gameType}>
-                {renderGameOptions(gameType)}
-                {gameType !== selectedGames[selectedGames.length - 1] && (
-                  <Divider sx={{ my: 3 }} />
-                )}
-              </React.Fragment>
+      <Box sx={{ mt: 4 }}>
+        <Typography variant="h5" gutterBottom>Players</Typography>
+        <PlayerForm onSubmit={onAddPlayer} availableTees={availableTees} />
+        {players.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="h6" gutterBottom>Added Players:</Typography>
+            {players.map((player, index) => (
+              <Typography key={index}>
+                {player.name} - {player.tee.name}
+              </Typography>
             ))}
-          </Grid>
+          </Box>
         )}
-      </Grid>
+      </Box>
     </Box>
   );
 };

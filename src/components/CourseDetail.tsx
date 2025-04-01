@@ -1,30 +1,24 @@
-import { useQuery } from '@apollo/client';
-import { useParams } from 'react-router-dom';
-import { GET_GOLF_COURSE } from '../graphql/queries';
-import { 
-  CircularProgress, 
-  Typography, 
-  Box, 
-  Container, 
-  Tabs, 
+import React, { useState } from 'react';
+import {
+  Box,
+  Paper,
+  Typography,
   Tab,
-  FormControl,
-  InputLabel,
+  Tabs,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Select,
   MenuItem,
-  SelectChangeEvent
+  SelectChangeEvent,
 } from '@mui/material';
-import { useState } from 'react';
 import { Scorecard } from './Scorecard';
-import { Game } from './Game';
+import { GameComponent } from './Game';
 import { PlayerForm, Player } from './PlayerForm';
-
-interface GolfHole {
-  id: string;
-  holeNumber: number;
-  par: number;
-  scoringIndex: number;
-}
+import type { Hole, ExtendedGolfTee, GameType } from '../types/game';
 
 interface GolfTee {
   id: string;
@@ -32,13 +26,15 @@ interface GolfTee {
   gender: string;
   courseRating: number;
   slopeRating: number;
-  holes: GolfHole[];
+  holes: Hole[];
 }
 
-interface GolfCourse {
-  id: string;
-  name: string;
-  tees: GolfTee[];
+interface CourseDetailProps {
+  course: {
+    id: string;
+    name: string;
+    tees: GolfTee[];
+  };
 }
 
 interface TabPanelProps {
@@ -58,128 +54,143 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      {value === index && (
-        <Box sx={{ p: 3 }}>
-          {children}
-        </Box>
-      )}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
 
-export const CourseDetail = () => {
-  const { id } = useParams<{ id: string }>();
+export const CourseDetail: React.FC<CourseDetailProps> = ({ course }) => {
   const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedTee, setSelectedTee] = useState(course.tees[0]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [scores, setScores] = useState<{ [key: string]: { [key: number]: number | null } }>({});
-  const [currentHole, setCurrentHole] = useState<number>(1);
-  const [selectedTeeId, setSelectedTeeId] = useState<string>('');
+  const [selectedGames, setSelectedGames] = useState<GameType[]>([]);
 
-  const { loading, error, data } = useQuery(GET_GOLF_COURSE, {
-    variables: { id }
-  });
-
-  if (loading) return (
-    <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-      <CircularProgress />
-    </Box>
-  );
-
-  if (error) return (
-    <Typography color="error">Error: {error.message}</Typography>
-  );
-
-  const course = data?.golfCourse as GolfCourse;
-  const selectedTee = course?.tees.find(tee => tee.id === selectedTeeId);
-
-  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setSelectedTab(newValue);
   };
 
   const handleTeeChange = (event: SelectChangeEvent<string>) => {
-    setSelectedTeeId(event.target.value);
+    const teeId = event.target.value;
+    const tee = course.tees.find(t => t.id === teeId);
+    if (tee) {
+      setSelectedTee(tee);
+    }
   };
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h4" gutterBottom>
-          {course?.name}
-        </Typography>
+  const handleScoreChange = (
+    playerId: string,
+    holeNumber: number,
+    score: number | null
+  ) => {
+    setScores(prev => ({
+      ...prev,
+      [playerId]: {
+        ...prev[playerId],
+        [holeNumber]: score,
+      },
+    }));
+  };
 
-        <FormControl fullWidth sx={{ mb: 4 }}>
-          <InputLabel id="tee-select-label">Select Tee</InputLabel>
+  const playerTees: { [key: string]: ExtendedGolfTee } = {};
+  players.forEach(player => {
+    playerTees[player.id] = {
+      id: selectedTee.id,
+      name: selectedTee.name,
+      courseRating: selectedTee.courseRating,
+      slopeRating: selectedTee.slopeRating,
+      holes: selectedTee.holes,
+    };
+  });
+
+  return (
+    <Box>
+      <Typography variant="h4" gutterBottom>
+        {course.name}
+      </Typography>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Tabs value={selectedTab} onChange={handleTabChange}>
+          <Tab label="Course Info" />
+          <Tab label="Players" />
+          <Tab label="Game" />
+          <Tab label="Scorecard" />
+        </Tabs>
+      </Box>
+
+      <TabPanel value={selectedTab} index={0}>
+        <Box sx={{ mb: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Select Tee
+          </Typography>
           <Select
-            labelId="tee-select-label"
-            id="tee-select"
-            value={selectedTeeId}
-            label="Select Tee"
+            value={selectedTee.id}
             onChange={handleTeeChange}
+            fullWidth
           >
-            {course?.tees.map(tee => (
+            {course.tees.map(tee => (
               <MenuItem key={tee.id} value={tee.id}>
-                {tee.name} ({tee.gender}) - CR: {tee.courseRating}, SR: {tee.slopeRating}
+                {tee.name} - CR: {tee.courseRating}, SR: {tee.slopeRating}
               </MenuItem>
             ))}
           </Select>
-        </FormControl>
-
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={selectedTab} onChange={handleTabChange}>
-            <Tab label="Players" />
-            <Tab label="Scorecard" disabled={!selectedTeeId} />
-            <Tab label="Game" disabled={!selectedTeeId || players.length === 0} />
-          </Tabs>
         </Box>
 
-        <TabPanel value={selectedTab} index={0}>
-          <PlayerForm 
-            players={players} 
-            onPlayersChange={setPlayers} 
-            selectedTeeId={selectedTeeId}
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Hole</TableCell>
+                <TableCell>Par</TableCell>
+                <TableCell>Distance</TableCell>
+                <TableCell>Stroke Index</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {selectedTee.holes.map(hole => (
+                <TableRow key={hole.id}>
+                  <TableCell>{hole.number}</TableCell>
+                  <TableCell>{hole.par}</TableCell>
+                  <TableCell>{hole.distance}</TableCell>
+                  <TableCell>{hole.strokeIndex}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
+
+      <TabPanel value={selectedTab} index={1}>
+        <PlayerForm
+          players={players}
+          onPlayersChange={setPlayers}
+          selectedTeeId={selectedTee.id}
+          tees={course.tees}
+        />
+      </TabPanel>
+
+      <TabPanel value={selectedTab} index={2}>
+        {selectedTee && (
+          <GameComponent
+            players={players}
+            selectedGames={selectedGames}
+            onGameChange={games => setSelectedGames(games)}
           />
-        </TabPanel>
+        )}
+      </TabPanel>
 
-        <TabPanel value={selectedTab} index={1}>
-          {selectedTee && (
-            <Scorecard 
-              holes={selectedTee.holes}
-              players={players}
-              scores={scores}
-              onScoreChange={(playerId, holeNumber, score) => {
-                setScores(prev => ({
-                  ...prev,
-                  [playerId]: {
-                    ...prev[playerId],
-                    [holeNumber]: score
-                  }
-                }));
-              }}
-            />
-          )}
-        </TabPanel>
-
-        <TabPanel value={selectedTab} index={2}>
-          {selectedTee && (
-            <Game
-              holes={selectedTee.holes}
-              players={players}
-              scores={scores}
-              onScoreChange={(playerId, holeNumber, score) => {
-                setScores(prev => ({
-                  ...prev,
-                  [playerId]: {
-                    ...prev[playerId],
-                    [holeNumber]: score
-                  }
-                }));
-              }}
-              currentHole={currentHole}
-              onCurrentHoleChange={setCurrentHole}
-            />
-          )}
-        </TabPanel>
-      </Box>
-    </Container>
+      <TabPanel value={selectedTab} index={3}>
+        {selectedTee && (
+          <Scorecard
+            players={players}
+            holes={selectedTee.holes}
+            scores={scores}
+            onScoreChange={handleScoreChange}
+            playerTees={playerTees}
+            games={[]}
+          />
+        )}
+      </TabPanel>
+    </Box>
   );
 };

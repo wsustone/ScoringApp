@@ -1,35 +1,29 @@
-import { FormControl, InputLabel, MenuItem, Select, Typography } from '@mui/material';
-import { useQuery } from '@apollo/client';
-import { GET_GOLF_COURSES } from '../graphql/queries';
+import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 
 interface GolfCourse {
   id: string;
   name: string;
-  tees: {
+  tees: Array<{
     id: string;
     name: string;
-    gender: string;
-  }[];
+    courseRating: number;
+    slopeRating: number;
+    holes: Array<{
+      id: string;
+      holeNumber: number;
+      par: number;
+      scoringIndex: number;
+    }>;
+  }>;
 }
 
 interface CourseListProps {
+  courses: GolfCourse[];
   onCourseSelect: (courseId: string) => void;
   selectedCourseId: string | null;
 }
 
-export const CourseList = ({ onCourseSelect, selectedCourseId }: CourseListProps) => {
-  const { loading, error, data } = useQuery(GET_GOLF_COURSES);
-
-  if (loading) {
-    return <Typography>Loading courses...</Typography>;
-  }
-
-  if (error) {
-    return <Typography color="error">Error loading courses: {error.message}</Typography>;
-  }
-
-  const courses = data?.golfCourses || [];
-
+export const CourseList = ({ courses, onCourseSelect, selectedCourseId }: CourseListProps) => {
   return (
     <FormControl fullWidth>
       <InputLabel id="course-select-label">Select Course</InputLabel>
