@@ -1,105 +1,137 @@
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
-  TextField,
-  Typography,
-} from '@mui/material';
-import { ExtendedGolfTee } from '../types/game';
+import React, { useState } from 'react';
+import { Box, TextField, Button, Select, MenuItem, FormControl, InputLabel, Grid, Typography } from '@mui/material';
+import { GolfTee } from '../types/game';
 
 export interface Player {
   id: string;
   name: string;
-  handicap: number;
   teeId: string;
-  tee?: ExtendedGolfTee;
+  handicap: number;
 }
 
 interface PlayerFormProps {
-  onSubmit?: (player: Player) => void;
-  onAddPlayer?: (player: Player) => void;
-  availableTees: ExtendedGolfTee[];
+  onPlayersChange: (players: Player[]) => void;
+  players: Player[];
+  tees: GolfTee[];
 }
 
-export const PlayerForm = ({ onSubmit, onAddPlayer, availableTees }: PlayerFormProps) => {
+export const PlayerForm: React.FC<PlayerFormProps> = ({
+  onPlayersChange,
+  players,
+  tees,
+}) => {
   const [name, setName] = useState('');
-  const [handicap, setHandicap] = useState('');
-  const [selectedTee, setSelectedTee] = useState<ExtendedGolfTee | null>(null);
+  const [selectedTeeId, setSelectedTeeId] = useState('');
+  const [handicap, setHandicap] = useState<number>(0);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !handicap || !selectedTee) return;
+    if (name && selectedTeeId) {
+      const newPlayer: Player = {
+        id: Math.random().toString(36).substring(7), // Generate a random ID
+        name,
+        teeId: selectedTeeId,
+        handicap,
+      };
 
-    const player: Player = {
-      id: `${name}-${Date.now()}`,
-      name,
-      handicap: parseFloat(handicap),
-      teeId: selectedTee.id,
-      tee: selectedTee
-    };
+      const updatedPlayers = [...players, newPlayer];
+      onPlayersChange(updatedPlayers);
 
-    if (onSubmit) onSubmit(player);
-    if (onAddPlayer) onAddPlayer(player);
-    setName('');
-    setHandicap('');
-    setSelectedTee(null);
+      // Reset form
+      setName('');
+      setSelectedTeeId('');
+      setHandicap(0);
+    }
+  };
+
+  const handleRemovePlayer = (playerId: string) => {
+    const updatedPlayers = players.filter((p) => p.id !== playerId);
+    onPlayersChange(updatedPlayers);
   };
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ maxWidth: 400 }}>
-      <Typography variant="h6" gutterBottom>
-        Add Player
+    <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+      <Typography variant="subtitle1" gutterBottom>
+        Add Players
       </Typography>
-      <Box sx={{ display: 'flex', gap: 2, flexDirection: 'column' }}>
-        <TextField
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-          fullWidth
-        />
-        <TextField
-          label="Handicap"
-          type="number"
-          value={handicap}
-          onChange={(e) => setHandicap(e.target.value)}
-          required
-          fullWidth
-          inputProps={{
-            step: 0.1,
-            min: 0,
-            max: 36,
-          }}
-        />
-        <FormControl fullWidth required>
-          <InputLabel>Tee</InputLabel>
-          <Select
-            value={selectedTee?.id || ''}
-            onChange={(e) => {
-              const tee = availableTees.find(t => t.id === e.target.value);
-              setSelectedTee(tee || null);
-            }}
-            label="Tee"
+      
+      <Grid container spacing={2}>
+        <Grid item xs={12} sm={4}>
+          <TextField
+            fullWidth
+            label="Player Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </Grid>
+        
+        <Grid item xs={12} sm={4}>
+          <FormControl fullWidth required>
+            <InputLabel>Tee</InputLabel>
+            <Select
+              value={selectedTeeId}
+              onChange={(e) => setSelectedTeeId(e.target.value)}
+              label="Tee"
+            >
+              {tees.map((tee) => (
+                <MenuItem key={tee.id} value={tee.id}>
+                  {tee.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Grid>
+        
+        <Grid item xs={12} sm={2}>
+          <TextField
+            fullWidth
+            type="number"
+            label="Handicap"
+            value={handicap}
+            onChange={(e) => setHandicap(parseInt(e.target.value) || 0)}
+            inputProps={{ min: 0, max: 54 }}
+          />
+        </Grid>
+        
+        <Grid item xs={12} sm={2}>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            type="submit"
+            sx={{ height: '100%' }}
           >
-            {availableTees.map((tee) => (
-              <MenuItem key={tee.id} value={tee.id}>
-                {tee.name}
-              </MenuItem>
+            Add Player
+          </Button>
+        </Grid>
+      </Grid>
+
+      {players.length > 0 && (
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="subtitle2" gutterBottom>
+            Players in Round:
+          </Typography>
+          <Grid container spacing={1}>
+            {players.map((player) => (
+              <Grid item xs={12} key={player.id}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography>
+                    {player.name} - {tees.find(t => t.id === player.teeId)?.name} (HCP: {player.handicap})
+                  </Typography>
+                  <Button
+                    size="small"
+                    color="error"
+                    onClick={() => handleRemovePlayer(player.id)}
+                  >
+                    Remove
+                  </Button>
+                </Box>
+              </Grid>
             ))}
-          </Select>
-        </FormControl>
-        <Button
-          type="submit"
-          variant="contained"
-          disabled={!name || !handicap || !selectedTee}
-        >
-          Add Player
-        </Button>
-      </Box>
+          </Grid>
+        </Box>
+      )}
     </Box>
   );
 };

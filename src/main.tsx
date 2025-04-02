@@ -30,11 +30,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'course/:id',
-        element: <CourseDetail />,
+        element: <CourseDetail courseName="" tees={[]} onStartRound={() => {}} />,
       },
       {
         path: 'round/:id',
-        element: <GamePage />,
+        element: <GamePage tees={[]} />,
       },
     ],
   },

@@ -1,6 +1,6 @@
 import { Box, Typography, TextField, Card, CardContent, Grid, IconButton, Button, FormControl, InputLabel, Select, MenuItem, Switch, FormControlLabel } from '@mui/material';
 import { Player } from './PlayerForm';
-import { Hole, BankerGame, NassauGame, SkinsGame, BankerHoleData } from '../types/game';
+import { Hole, BankerGame, NassauGame, SkinsGame, BankerHoleData, ExtendedGolfTee } from '../types/game';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import { useState } from 'react';
@@ -10,11 +10,12 @@ interface HoleByHoleProps {
   holes: Hole[];
   scores: { [key: string]: { [key: number]: number | null } };
   onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
+  playerTees: { [key: string]: ExtendedGolfTee };
   games: (BankerGame | NassauGame | SkinsGame)[];
   onBankerUpdate?: (holeNumber: number, data: Partial<BankerHoleData>) => void;
 }
 
-export const HoleByHole = ({ players, holes, scores, onScoreChange, games, onBankerUpdate }: HoleByHoleProps) => {
+export const HoleByHole = ({ players, holes, scores, onScoreChange, playerTees, games, onBankerUpdate }: HoleByHoleProps) => {
   const [currentHoleIndex, setCurrentHoleIndex] = useState(0);
   const [selectedBanker, setSelectedBanker] = useState<string | null>(null);
   const [bankerDots, setBankerDots] = useState<number>(1);
@@ -137,6 +138,9 @@ export const HoleByHole = ({ players, holes, scores, onScoreChange, games, onBan
                 <CardContent>
                   <Typography variant="h6" gutterBottom>
                     {player.name}
+                  </Typography>
+                  <Typography variant="body2" gutterBottom>
+                    Tee: {playerTees[player.id]?.name}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <TextField

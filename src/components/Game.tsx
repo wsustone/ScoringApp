@@ -1,282 +1,175 @@
-import { useState } from 'react';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  FormGroup,
-  FormHelperText,
-  Grid,
-  Switch,
-  Typography,
-  Slider,
-} from '@mui/material';
-import { PlayerForm, Player } from './PlayerForm';
-import { GameType, ExtendedGolfTee, BankerGame } from '../types/game';
+import React, { useState } from 'react';
+import { Box, Checkbox, FormControlLabel, FormGroup, TextField, Typography } from '@mui/material';
+import { GameType, Game } from '../types/game';
 
 interface GameComponentProps {
-  players: Player[];
   onGameChange: (games: GameType[]) => void;
-  onAddPlayer: (player: Player) => void;
-  availableTees: ExtendedGolfTee[];
+  selectedGames: Game[];
 }
 
-interface GameOption {
-  type: GameType;
-  label: string;
-  description: string;
-  defaultSettings: GameSettings;
-}
+export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, selectedGames }) => {
+  const availableGames: GameType[] = ['banker', 'nassau', 'skins'];
+  const [bankerSettings, setBankerSettings] = useState({
+    enabled: false,
+    minDots: 1,
+    maxDots: 4,
+    dotValue: 1,
+    doubleBirdieBets: true,
+    useGrossBirdies: false,
+    par3Triples: false,
+  });
+  const [nassauSettings, setNassauSettings] = useState({
+    enabled: false,
+    frontNinePoints: 0,
+    backNinePoints: 0,
+    matchPoints: 0,
+  });
+  const [skinsSettings, setSkinsSettings] = useState({
+    enabled: false,
+    pointsPerSkin: 1,
+  });
 
-interface GameSettings {
-  enabled: boolean;
-  options: {
-    [key: string]: any;
-  };
-}
+  const handleGameChange = (game: GameType) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = event.target.checked;
+    const newGames = checked
+      ? [...selectedGames.map(g => g.type), game]
+      : selectedGames.map(g => g.type).filter(g => g !== game);
+    
+    onGameChange(newGames);
 
-const defaultBankerGame = (): Omit<BankerGame, 'id' | 'roundId'> => ({
-  type: 'banker',
-  minDots: 1,
-  maxDots: 4,
-  dotValue: 1,
-  doubleBirdieBets: true,
-  useGrossBirdies: false,
-  par3Triples: false,
-  bankerData: {
-    holes: []
-  }
-});
-
-const GAME_OPTIONS: GameOption[] = [
-  {
-    type: 'banker',
-    label: 'Banker',
-    description: 'One player takes on all others. Banker rotates each hole.',
-    defaultSettings: {
-      enabled: false,
-      options: defaultBankerGame()
+    // Update settings enabled state
+    switch (game) {
+      case 'banker':
+        setBankerSettings(prev => ({ ...prev, enabled: checked }));
+        break;
+      case 'nassau':
+        setNassauSettings(prev => ({ ...prev, enabled: checked }));
+        break;
+      case 'skins':
+        setSkinsSettings(prev => ({ ...prev, enabled: checked }));
+        break;
     }
-  },
-  {
-    type: 'nassau',
-    label: 'Nassau',
-    description: 'Three separate bets: front 9, back 9, and total match.',
-    defaultSettings: {
-      enabled: false,
-      options: {
-        betAmount: 2,
-        autoPress: true,
-        pressEvery: 2
-      }
-    }
-  },
-  {
-    type: 'skins',
-    label: 'Skins',
-    description: 'Each hole is a separate bet. Winner takes all.',
-    defaultSettings: {
-      enabled: false,
-      options: {
-        carryOver: true,
-        valuePerSkin: 1
-      }
-    }
-  }
-];
-
-export const GameComponent = ({
-  players,
-  onGameChange,
-  onAddPlayer,
-  availableTees
-}: GameComponentProps) => {
-  const [gameSettings, setGameSettings] = useState<{ [key: string]: GameSettings }>(
-    GAME_OPTIONS.reduce((acc, option) => ({
-      ...acc,
-      [option.type]: option.defaultSettings
-    }), {})
-  );
-
-  const [showBankerSettings, setShowBankerSettings] = useState(false);
-
-  const handleGameToggle = (gameType: GameType) => {
-    const newSettings = {
-      ...gameSettings,
-      [gameType]: {
-        ...gameSettings[gameType],
-        enabled: !gameSettings[gameType].enabled
-      }
-    };
-    setGameSettings(newSettings);
-
-    const enabledGames = GAME_OPTIONS
-      .filter(option => newSettings[option.type].enabled)
-      .map(option => option.type);
-    onGameChange(enabledGames);
-  };
-
-  const handleBankerSettingsOpen = () => {
-    setShowBankerSettings(true);
-  };
-
-  const handleBankerSettingsClose = () => {
-    setShowBankerSettings(false);
-  };
-
-  const handleBankerSettingChange = (setting: keyof Omit<BankerGame, 'id' | 'roundId' | 'type' | 'bankerData'>) => (
-    _: Event,
-    value: number | boolean
-  ) => {
-    setGameSettings({
-      ...gameSettings,
-      banker: {
-        ...gameSettings.banker,
-        options: {
-          ...gameSettings.banker.options,
-          [setting]: value
-        }
-      }
-    });
   };
 
   return (
-    <Box>
-      <Typography variant="h5" gutterBottom>Game Selection</Typography>
-      <Grid container spacing={2}>
-        {GAME_OPTIONS.map(option => (
-          <Grid item xs={12} key={option.type}>
-            <Card>
-              <CardContent>
-                <FormGroup>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={gameSettings[option.type].enabled}
-                        onChange={() => handleGameToggle(option.type)}
-                      />
-                    }
-                    label={option.label}
-                  />
-                  <FormHelperText>{option.description}</FormHelperText>
-                  {option.type === 'banker' && gameSettings.banker.enabled && (
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      onClick={handleBankerSettingsOpen}
-                      sx={{ mt: 1 }}
-                    >
-                      Configure Banker Settings
-                    </Button>
-                  )}
-                </FormGroup>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-
-      <Dialog open={showBankerSettings} onClose={handleBankerSettingsClose}>
-        <DialogTitle>Banker Game Settings</DialogTitle>
-        <DialogContent>
-          <Box sx={{ width: 300, mt: 2 }}>
-            <Typography gutterBottom>Dots per Hole</Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Typography>Min Dots</Typography>
-                <Slider
-                  value={gameSettings.banker.options.minDots}
-                  onChange={(event, value) => handleBankerSettingChange('minDots')(event as Event, value as number)}
-                  min={1}
-                  max={4}
-                  marks
-                  valueLabelDisplay="auto"
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <Typography>Max Dots</Typography>
-                <Slider
-                  value={gameSettings.banker.options.maxDots}
-                  onChange={(event, value) => handleBankerSettingChange('maxDots')(event as Event, value as number)}
-                  min={1}
-                  max={4}
-                  marks
-                  valueLabelDisplay="auto"
-                />
-              </Grid>
-            </Grid>
-
-            <Box sx={{ mt: 2 }}>
-              <Typography gutterBottom>Dot Value ($)</Typography>
-              <Slider
-                value={gameSettings.banker.options.dotValue}
-                onChange={(event, value) => handleBankerSettingChange('dotValue')(event as Event, value as number)}
-                min={0.25}
-                max={5}
-                step={0.25}
-                marks={[
-                  { value: 0.25, label: '0.25' },
-                  { value: 1, label: '1' },
-                  { value: 2, label: '2' },
-                  { value: 5, label: '5' }
-                ]}
-                valueLabelDisplay="auto"
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="subtitle1" gutterBottom>
+        Select Games
+      </Typography>
+      <FormGroup>
+        {availableGames.map((game) => (
+          <FormControlLabel
+            key={game}
+            control={
+              <Checkbox
+                checked={selectedGames.some(g => g.type === game)}
+                onChange={handleGameChange(game)}
               />
-            </Box>
+            }
+            label={game.charAt(0).toUpperCase() + game.slice(1)}
+          />
+        ))}
+      </FormGroup>
 
-            <Box sx={{ mt: 2 }}>
-              <FormGroup>
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameSettings.banker.options.doubleBirdieBets}
-                      onChange={(event) => handleBankerSettingChange('doubleBirdieBets')(event as unknown as Event, event.target.checked)}
-                    />
-                  }
-                  label="Double Birdie Bets"
+      {bankerSettings.enabled && (
+        <Box sx={{ mt: 2, pl: 3 }}>
+          <Typography variant="subtitle2">Banker Settings</Typography>
+          <TextField
+            label="Min Dots"
+            type="number"
+            value={bankerSettings.minDots}
+            onChange={(e) => setBankerSettings(prev => ({ ...prev, minDots: parseInt(e.target.value) || 1 }))}
+            size="small"
+            sx={{ mr: 1 }}
+          />
+          <TextField
+            label="Max Dots"
+            type="number"
+            value={bankerSettings.maxDots}
+            onChange={(e) => setBankerSettings(prev => ({ ...prev, maxDots: parseInt(e.target.value) || 1 }))}
+            size="small"
+            sx={{ mr: 1 }}
+          />
+          <TextField
+            label="Dot Value"
+            type="number"
+            value={bankerSettings.dotValue}
+            onChange={(e) => setBankerSettings(prev => ({ ...prev, dotValue: parseInt(e.target.value) || 1 }))}
+            size="small"
+          />
+          <FormGroup>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={bankerSettings.doubleBirdieBets}
+                  onChange={(e) => setBankerSettings(prev => ({ ...prev, doubleBirdieBets: e.target.checked }))}
                 />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameSettings.banker.options.useGrossBirdies}
-                      onChange={(event) => handleBankerSettingChange('useGrossBirdies')(event as unknown as Event, event.target.checked)}
-                    />
-                  }
-                  label="Use Gross Birdies"
+              }
+              label="Double Birdie Bets"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={bankerSettings.useGrossBirdies}
+                  onChange={(e) => setBankerSettings(prev => ({ ...prev, useGrossBirdies: e.target.checked }))}
                 />
-                <FormControlLabel
-                  control={
-                    <Switch
-                      checked={gameSettings.banker.options.par3Triples}
-                      onChange={(event) => handleBankerSettingChange('par3Triples')(event as unknown as Event, event.target.checked)}
-                    />
-                  }
-                  label="Par 3 Triples"
+              }
+              label="Use Gross Birdies"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={bankerSettings.par3Triples}
+                  onChange={(e) => setBankerSettings(prev => ({ ...prev, par3Triples: e.target.checked }))}
                 />
-              </FormGroup>
-            </Box>
-          </Box>
-        </DialogContent>
-      </Dialog>
+              }
+              label="Par 3 Triples"
+            />
+          </FormGroup>
+        </Box>
+      )}
 
-      <Box sx={{ mt: 4 }}>
-        <Typography variant="h5" gutterBottom>Players</Typography>
-        <PlayerForm onSubmit={onAddPlayer} availableTees={availableTees} />
-        {players.length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="h6" gutterBottom>Added Players:</Typography>
-            {players.map((player, index) => (
-              <Typography key={index}>
-                {player.name} ({player.tee?.name || 'No tee selected'})
-              </Typography>
-            ))}
-          </Box>
-        )}
-      </Box>
+      {nassauSettings.enabled && (
+        <Box sx={{ mt: 2, pl: 3 }}>
+          <Typography variant="subtitle2">Nassau Settings</Typography>
+          <TextField
+            label="Front Nine Points"
+            type="number"
+            value={nassauSettings.frontNinePoints}
+            onChange={(e) => setNassauSettings(prev => ({ ...prev, frontNinePoints: parseInt(e.target.value) || 0 }))}
+            size="small"
+            sx={{ mr: 1 }}
+          />
+          <TextField
+            label="Back Nine Points"
+            type="number"
+            value={nassauSettings.backNinePoints}
+            onChange={(e) => setNassauSettings(prev => ({ ...prev, backNinePoints: parseInt(e.target.value) || 0 }))}
+            size="small"
+            sx={{ mr: 1 }}
+          />
+          <TextField
+            label="Match Points"
+            type="number"
+            value={nassauSettings.matchPoints}
+            onChange={(e) => setNassauSettings(prev => ({ ...prev, matchPoints: parseInt(e.target.value) || 0 }))}
+            size="small"
+          />
+        </Box>
+      )}
+
+      {skinsSettings.enabled && (
+        <Box sx={{ mt: 2, pl: 3 }}>
+          <Typography variant="subtitle2">Skins Settings</Typography>
+          <TextField
+            label="Points per Skin"
+            type="number"
+            value={skinsSettings.pointsPerSkin}
+            onChange={(e) => setSkinsSettings(prev => ({ ...prev, pointsPerSkin: parseInt(e.target.value) || 1 }))}
+            size="small"
+          />
+        </Box>
+      )}
     </Box>
   );
 };

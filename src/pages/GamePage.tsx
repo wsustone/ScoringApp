@@ -1,36 +1,56 @@
-import { Box } from '@mui/material';
-import { Player } from '../components/PlayerForm';
+import React, { useState } from 'react';
+import { Box, Typography } from '@mui/material';
+import { Player, PlayerForm } from '../components/PlayerForm';
 import { GameComponent } from '../components/Game';
-import { GameType, ExtendedGolfTee } from '../types/game';
-import { useState } from 'react';
+import { GameType, Game, GolfTee, createGame } from '../types/game';
 
-interface GamePageProps {
-  availableTees: ExtendedGolfTee[];
-  onPlayersChange: (players: Player[]) => void;
-  onGamesChange: (games: GameType[]) => void;
-}
-
-export const GamePage = ({ availableTees, onPlayersChange, onGamesChange }: GamePageProps) => {
+export const GamePage: React.FC<{ tees: GolfTee[] }> = ({ tees }) => {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedGames, setSelectedGames] = useState<Game[]>([]);
 
-  const handleAddPlayer = (player: Player) => {
-    const newPlayers = [...players, player];
-    setPlayers(newPlayers);
-    onPlayersChange(newPlayers);
-  };
-
-  const handleGameChange = (selectedGames: GameType[]) => {
-    onGamesChange(selectedGames);
+  const handleGameChange = (gameTypes: GameType[]) => {
+    const games = gameTypes.map(type => createGame(type, 'temp-id'));
+    setSelectedGames(games);
   };
 
   return (
     <Box>
-      <GameComponent
-        players={players}
-        onGameChange={handleGameChange}
-        onAddPlayer={handleAddPlayer}
-        availableTees={availableTees}
-      />
+      <Typography variant="h4" gutterBottom>
+        Game Setup
+      </Typography>
+
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" gutterBottom>
+          Select Games
+        </Typography>
+        <GameComponent
+          onGameChange={handleGameChange}
+          selectedGames={selectedGames}
+        />
+      </Box>
+
+      {selectedGames.length > 0 && (
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            Add Players
+          </Typography>
+          <PlayerForm
+            onPlayersChange={setPlayers}
+            players={players}
+            tees={tees}
+          />
+          {players.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6">Added Players:</Typography>
+              {players.map((player, index) => (
+                <Typography key={index}>
+                  {player.name} ({tees.find(t => t.id === player.teeId)?.name || 'No tee selected'})
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </Box>
+      )}
     </Box>
   );
 };

@@ -1,3 +1,72 @@
+export type GameType = 'banker' | 'nassau' | 'skins';
+
+export interface BaseGame {
+  id: string;
+  type: GameType;
+  roundId: string;
+  enabled: boolean;
+}
+
+export interface BankerGame extends BaseGame {
+  type: 'banker';
+  minDots: number;
+  maxDots: number;
+  dotValue: number;
+  doubleBirdieBets: boolean;
+  useGrossBirdies: boolean;
+  par3Triples: boolean;
+  bankerData: {
+    holes: {
+      winner: string | null;
+      points: number;
+      dots: number;
+      holeNumber: number;
+      doubles: string[];
+    }[];
+  };
+}
+
+export interface NassauGame extends BaseGame {
+  type: 'nassau';
+  frontNinePoints: number;
+  backNinePoints: number;
+  matchPoints: number;
+  nassauData: {
+    frontNine: {
+      winner: string | null;
+      points: number;
+    };
+    backNine: {
+      winner: string | null;
+      points: number;
+    };
+    match: {
+      winner: string | null;
+      points: number;
+    };
+  };
+}
+
+export interface SkinsGame extends BaseGame {
+  type: 'skins';
+  pointsPerSkin: number;
+  skinsData: {
+    holes: {
+      winner: string | null;
+      points: number;
+    }[];
+  };
+}
+
+export type Game = BankerGame | NassauGame | SkinsGame;
+
+export interface GolfHole {
+  id: string;
+  holeNumber: number;
+  par: number;
+  scoringIndex: number;
+}
+
 export interface Hole {
   id: string;
   roundId: string;
@@ -5,13 +74,6 @@ export interface Hole {
   par: number;
   distance: number;
   strokeIndex: number;
-}
-
-export interface GolfHole {
-  id: string;
-  holeNumber: number;
-  par: number;
-  scoringIndex: number;
 }
 
 export interface GolfTee {
@@ -33,62 +95,16 @@ export interface GolfCourse {
   tees: GolfTee[];
 }
 
-export type GameType = 'banker' | 'nassau' | 'skins';
-
 export interface HoleData {
   winner: string | null;
   points: number;
 }
 
-export interface MatchData {
-  winner: string | null;
-  points: number;
-}
-
-export interface BankerHoleData {
-  winner: string | null;
-  points: number;
+export interface BankerHoleData extends HoleData {
   dots: number;
   holeNumber: number;
-  doubles: string[]; // Array of player IDs who doubled on this hole
+  doubles: string[];
 }
-
-export interface BankerGame {
-  type: 'banker';
-  id: string;
-  roundId: string;
-  minDots: number;
-  maxDots: number;
-  dotValue: number;
-  doubleBirdieBets: boolean;
-  useGrossBirdies: boolean;
-  par3Triples: boolean;
-  bankerData: {
-    holes: BankerHoleData[];
-  };
-}
-
-export interface NassauGame {
-  type: 'nassau';
-  id: string;
-  roundId: string;
-  nassauData: {
-    frontNine: MatchData;
-    backNine: MatchData;
-    match: MatchData;
-  };
-}
-
-export interface SkinsGame {
-  type: 'skins';
-  id: string;
-  roundId: string;
-  skinsData: {
-    holes: MatchData[];
-  };
-}
-
-export type Game = BankerGame | NassauGame | SkinsGame;
 
 export interface GameSettings {
   banker: {
@@ -110,28 +126,78 @@ export interface GameSettings {
 
 export interface Round {
   id: string;
-  startTime: string;
-  endTime?: string;
-  courseName: string;
+  start_time: string;
+  end_time?: string;
+  course_name: string;
   status: string;
-  players: PlayerRound[];
-  scores: Score[];
+  players: {
+    id: string;
+    round_id: string;
+    player_id: string;
+    player_name: string;
+    handicap: number;
+    tee_id: string;
+  }[];
+  scores: {
+    id: string;
+    round_id: string;
+    hole_id: string;
+    player_id: string;
+    score: number | null;
+    timestamp: string;
+  }[];
 }
 
-export interface PlayerRound {
-  id: string;
-  roundId: string;
-  playerId: string;
-  playerName: string;
-  handicap: number;
-  teeId: string;
-}
+export const createGame = (type: GameType, roundId: string): Game => {
+  const baseGame = {
+    id: `${type}-${roundId}`,
+    type,
+    roundId,
+    enabled: true,
+  };
 
-export interface Score {
-  id: string;
-  roundId: string;
-  holeId: string;
-  playerId: string;
-  score: number | null;
-  timestamp: string;
-}
+  switch (type) {
+    case 'banker':
+      return {
+        ...baseGame,
+        minDots: 1,
+        maxDots: 4,
+        dotValue: 1,
+        doubleBirdieBets: true,
+        useGrossBirdies: false,
+        par3Triples: false,
+        bankerData: {
+          holes: [],
+        },
+      } as BankerGame;
+    case 'nassau':
+      return {
+        ...baseGame,
+        frontNinePoints: 0,
+        backNinePoints: 0,
+        matchPoints: 0,
+        nassauData: {
+          frontNine: {
+            winner: null,
+            points: 0,
+          },
+          backNine: {
+            winner: null,
+            points: 0,
+          },
+          match: {
+            winner: null,
+            points: 0,
+          },
+        },
+      } as NassauGame;
+    case 'skins':
+      return {
+        ...baseGame,
+        pointsPerSkin: 1,
+        skinsData: {
+          holes: [],
+        },
+      } as SkinsGame;
+  }
+};

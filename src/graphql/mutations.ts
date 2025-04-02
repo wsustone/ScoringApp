@@ -1,69 +1,51 @@
 import { gql } from '@apollo/client';
 
 export const START_ROUND = gql`
-  mutation StartRound($input: StartRoundInput!) {
-    startRound(input: $input) {
+  mutation StartRound($course_name: String!, $players: [PlayerInput!]!) {
+    start_round(course_name: $course_name, players: $players) {
       id
-      courseId
-      date
+      course_name
+      start_time
+      status
       players {
         id
+        player_id
         name
-        teeId
-      }
-      games {
-        id
-        type
-        enabled
-        dotValue
-        maxDots
-        bankerData {
-          holes {
-            holeNumber
-            winner
-            points
-            dots
-            doubles
-          }
-        }
+        handicap
+        tee_id
       }
     }
   }
 `;
 
-export const UPDATE_ROUND = gql`
-  mutation UpdateRound($input: UpdateRoundInput!) {
-    updateRound(input: $input) {
-      id
-      scores {
-        id
-        playerId
-        holeId
-        score
-        timestamp
-      }
-    }
-  }
-`;
+export interface PlayerInput {
+  id: string;
+  name: string;
+  tee_id: string;
+  handicap: number;
+}
 
 export const UPDATE_SCORE = gql`
-  mutation UpdateScore(
-    $roundId: ID!
-    $holeNumber: Int!
-    $playerId: String!
-    $score: Int
-  ) {
-    updateScore(
-      roundId: $roundId
-      holeNumber: $holeNumber
-      playerId: $playerId
-      score: $score
-    )
+  mutation UpdateScore($round_id: ID!, $hole_id: ID!, $player_id: String!, $score: Int!) {
+    update_score(round_id: $round_id, hole_id: $hole_id, player_id: $player_id, score: $score) {
+      id
+      round_id
+      hole_id
+      player_id
+      score
+      timestamp
+    }
   }
 `;
 
 export const END_ROUND = gql`
-  mutation EndRound($id: ID!) {
-    endRound(id: $id)
+  mutation EndRound($round_id: ID!) {
+    end_round(round_id: $round_id) {
+      id
+      course_name
+      start_time
+      end_time
+      status
+    }
   }
 `;

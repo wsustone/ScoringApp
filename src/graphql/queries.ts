@@ -2,20 +2,21 @@ import { gql } from '@apollo/client';
 
 export const GET_GOLF_COURSES = gql`
   query GetGolfCourses {
-    golfCourses {
+    golf_courses {
       id
       name
       tees {
         id
         name
         gender
-        courseRating
-        slopeRating
+        course_rating
+        slope_rating
         holes {
           id
-          holeNumber
+          hole_number
           par
-          scoringIndex
+          stroke_index
+          distance
         }
       }
     }
@@ -24,20 +25,21 @@ export const GET_GOLF_COURSES = gql`
 
 export const GET_GOLF_COURSE = gql`
   query GetGolfCourse($id: ID!) {
-    golfCourse(id: $id) {
+    golf_course(id: $id) {
       id
       name
       tees {
         id
         name
         gender
-        courseRating
-        slopeRating
+        course_rating
+        slope_rating
         holes {
           id
-          holeNumber
+          hole_number
           par
-          scoringIndex
+          stroke_index
+          distance
         }
       }
     }
@@ -45,17 +47,18 @@ export const GET_GOLF_COURSE = gql`
 `;
 
 export const GET_COURSE_HOLES = gql`
-  query GetCourseHoles($courseId: ID!) {
-    golfCourse(id: $courseId) {
+  query GetCourseHoles($course_id: ID!) {
+    golf_course(id: $course_id) {
       id
       tees {
         id
         name
         holes {
           id
-          holeNumber
+          hole_number
           par
-          scoringIndex
+          stroke_index
+          distance
         }
       }
     }
@@ -64,25 +67,25 @@ export const GET_COURSE_HOLES = gql`
 
 export const GET_ROUND = gql`
   query GetRound($id: ID!) {
-    getRound(id: $id) {
+    get_round(id: $id) {
       id
-      startTime
-      endTime
-      courseName
+      start_time
+      end_time
+      course_name
       status
       players {
         id
-        roundId
-        playerId
+        round_id
+        player_id
         name
         handicap
-        teeID
+        tee_id
       }
       scores {
         id
-        roundId
-        holeId
-        playerId
+        round_id
+        hole_id
+        player_id
         score
         timestamp
       }
@@ -92,25 +95,25 @@ export const GET_ROUND = gql`
 
 export const GET_ACTIVE_ROUNDS = gql`
   query GetActiveRounds {
-    getActiveRounds {
+    get_active_rounds {
       id
-      startTime
-      endTime
-      courseName
+      start_time
+      end_time
+      course_name
       status
       players {
         id
-        roundId
-        playerId
+        round_id
+        player_id
         name
         handicap
-        teeId
+        tee_id
       }
       scores {
         id
-        roundId
-        holeId
-        playerId
+        round_id
+        hole_id
+        player_id
         score
         timestamp
       }
@@ -120,13 +123,13 @@ export const GET_ACTIVE_ROUNDS = gql`
 
 export const START_ROUND = gql`
   mutation StartRound($input: StartRoundInput!) {
-    startRound(input: $input) {
-      courseId
+    start_round(input: $input) {
+      course_id
       players {
         id
         name
         handicap
-        teeID
+        tee_id
       }
     }
   }
@@ -134,21 +137,21 @@ export const START_ROUND = gql`
 
 export const UPDATE_ROUND = gql`
   mutation UpdateRound($input: UpdateRoundInput!) {
-    updateRound(input: $input) {
+    update_round(input: $input) {
       id
-      courseId
-      courseName
+      course_id
+      course_name
       status
       players {
         id
         name
         handicap
-        teeID
+        tee_id
       }
       scores {
         id
-        playerId
-        holeId
+        player_id
+        hole_id
         score
         timestamp
       }
@@ -158,15 +161,15 @@ export const UPDATE_ROUND = gql`
 
 export const UPDATE_SCORE = gql`
   mutation UpdateScore(
-    $roundId: ID!
-    $holeNumber: Int!
-    $playerId: String!
+    $round_id: ID!
+    $hole_number: Int!
+    $player_id: String!
     $score: Int
   ) {
-    updateScore(
-      roundId: $roundId
-      holeNumber: $holeNumber
-      playerId: $playerId
+    update_score(
+      round_id: $round_id
+      hole_number: $hole_number
+      player_id: $player_id
       score: $score
     )
   }
@@ -174,6 +177,6 @@ export const UPDATE_SCORE = gql`
 
 export const END_ROUND = gql`
   mutation EndRound($id: ID!) {
-    endRound(id: $id)
+    end_round(id: $id)
   }
 `;
