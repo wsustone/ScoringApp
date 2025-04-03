@@ -4,7 +4,7 @@ import { Player, PlayerForm } from '../components/PlayerForm';
 import { GameComponent } from '../components/Game';
 import { GameType, Game, GolfTee, createGame } from '../types/game';
 
-export const GamePage: React.FC<{ tees: GolfTee[] }> = ({ tees }) => {
+export const GamePage: React.FC<{ tee_settings: GolfTee[] }> = ({ tee_settings }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
 
@@ -35,16 +35,16 @@ export const GamePage: React.FC<{ tees: GolfTee[] }> = ({ tees }) => {
             Add Players
           </Typography>
           <PlayerForm
+            tee_settings={tee_settings}
             onPlayersChange={setPlayers}
             players={players}
-            tees={tees}
           />
           {players.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="h6">Added Players:</Typography>
               {players.map((player, index) => (
                 <Typography key={index}>
-                  {player.name} ({tees.find(t => t.id === player.teeId)?.name || 'No tee selected'})
+                  {player.name} - {tee_settings.find(t => t.id === player.tee_id)?.name} (HCP: {player.handicap})
                 </Typography>
               ))}
             </Box>

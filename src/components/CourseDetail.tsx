@@ -6,13 +6,13 @@ import { GameType, Game, GolfTee, createGame } from '../types/game';
 
 interface CourseDetailProps {
   courseName: string;
-  tees: GolfTee[];
+  tee_settings: GolfTee[];
   onStartRound: (players: Player[], games: Game[]) => void;
 }
 
 export const CourseDetail: React.FC<CourseDetailProps> = ({
   courseName,
-  tees,
+  tee_settings,
   onStartRound,
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
@@ -51,16 +51,16 @@ export const CourseDetail: React.FC<CourseDetailProps> = ({
             Add Players
           </Typography>
           <PlayerForm
+            tee_settings={tee_settings}
             onPlayersChange={setPlayers}
             players={players}
-            tees={tees}
           />
           {players.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Typography variant="h6">Added Players:</Typography>
               {players.map((player, index) => (
                 <Typography key={index}>
-                  {player.name} ({tees.find(t => t.id === player.teeId)?.name || 'No tee selected'})
+                  {player.name} - {tee_settings.find(t => t.id === player.tee_id)?.name} (HCP: {player.handicap})
                 </Typography>
               ))}
             </Box>

@@ -5,15 +5,15 @@ export const GET_GOLF_COURSES = gql`
     golf_courses {
       id
       name
-      tees {
+      location
+      tee_settings {
         id
         name
-        gender
         course_rating
         slope_rating
         holes {
           id
-          hole_number
+          number
           par
           stroke_index
           distance
@@ -28,15 +28,15 @@ export const GET_GOLF_COURSE = gql`
     golf_course(id: $id) {
       id
       name
-      tees {
+      location
+      tee_settings {
         id
         name
-        gender
         course_rating
         slope_rating
         holes {
           id
-          hole_number
+          number
           par
           stroke_index
           distance
@@ -69,17 +69,12 @@ export const GET_ROUND = gql`
   query GetRound($id: ID!) {
     get_round(id: $id) {
       id
-      start_time
-      end_time
       course_name
-      status
       players {
         id
-        round_id
-        player_id
         name
-        handicap
         tee_id
+        handicap
       }
       scores {
         id
@@ -88,6 +83,11 @@ export const GET_ROUND = gql`
         player_id
         score
         timestamp
+      }
+      games {
+        type
+        id
+        course_id
       }
     }
   }
@@ -114,69 +114,37 @@ export const GET_ACTIVE_ROUNDS = gql`
         round_id
         hole_id
         player_id
-        score
+        net_score
+        gross_score
         timestamp
       }
-    }
-  }
-`;
-
-export const START_ROUND = gql`
-  mutation StartRound($input: StartRoundInput!) {
-    start_round(input: $input) {
-      course_id
-      players {
+      games {
         id
-        name
-        handicap
-        tee_id
+        type
+        course_id
+        enabled
+        settings {
+          banker {
+            min_dots
+            max_dots
+            dot_value
+            double_birdie_bets
+            use_gross_birdies
+            par3_triples
+          }
+          nassau {
+            front_nine_bet
+            back_nine_bet
+            match_bet
+            auto_press
+            press_after
+          }
+          skins {
+            carry_over
+            bet_amount
+          }
+        }
       }
     }
-  }
-`;
-
-export const UPDATE_ROUND = gql`
-  mutation UpdateRound($input: UpdateRoundInput!) {
-    update_round(input: $input) {
-      id
-      course_id
-      course_name
-      status
-      players {
-        id
-        name
-        handicap
-        tee_id
-      }
-      scores {
-        id
-        player_id
-        hole_id
-        score
-        timestamp
-      }
-    }
-  }
-`;
-
-export const UPDATE_SCORE = gql`
-  mutation UpdateScore(
-    $round_id: ID!
-    $hole_number: Int!
-    $player_id: String!
-    $score: Int
-  ) {
-    update_score(
-      round_id: $round_id
-      hole_number: $hole_number
-      player_id: $player_id
-      score: $score
-    )
-  }
-`;
-
-export const END_ROUND = gql`
-  mutation EndRound($id: ID!) {
-    end_round(id: $id)
   }
 `;

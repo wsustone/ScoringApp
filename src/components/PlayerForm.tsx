@@ -1,24 +1,24 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, Select, MenuItem, FormControl, InputLabel, Grid, Typography } from '@mui/material';
-import { GolfTee } from '../types/game';
+import { TeeSetting } from '../types/game';
 
 export interface Player {
   id: string;
   name: string;
-  teeId: string;
+  tee_id: string;
   handicap: number;
 }
 
 interface PlayerFormProps {
   onPlayersChange: (players: Player[]) => void;
   players: Player[];
-  tees: GolfTee[];
+  tee_settings: TeeSetting[];
 }
 
 export const PlayerForm: React.FC<PlayerFormProps> = ({
   onPlayersChange,
   players,
-  tees,
+  tee_settings,
 }) => {
   const [name, setName] = useState('');
   const [selectedTeeId, setSelectedTeeId] = useState('');
@@ -30,7 +30,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       const newPlayer: Player = {
         id: Math.random().toString(36).substring(7), // Generate a random ID
         name,
-        teeId: selectedTeeId,
+        tee_id: selectedTeeId,
         handicap,
       };
 
@@ -74,7 +74,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
               onChange={(e) => setSelectedTeeId(e.target.value)}
               label="Tee"
             >
-              {tees.map((tee) => (
+              {tee_settings.map((tee) => (
                 <MenuItem key={tee.id} value={tee.id}>
                   {tee.name}
                 </MenuItem>
@@ -117,7 +117,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
               <Grid item xs={12} key={player.id}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography>
-                    {player.name} - {tees.find(t => t.id === player.teeId)?.name} (HCP: {player.handicap})
+                    {player.name} - {tee_settings.find(t => t.id === player.tee_id)?.name} (HCP: {player.handicap})
                   </Typography>
                   <Button
                     size="small"
