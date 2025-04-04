@@ -127,3 +127,13 @@ export const END_ROUND = gql`
     }
   }
 `;
+
+export const DISCARD_ROUND = gql`
+  mutation DiscardRound($round_id: ID!) {
+    discard_round(round_id: $round_id) {
+      id
+      course_name
+      status
+    }
+  }
+`;

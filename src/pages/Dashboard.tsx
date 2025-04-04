@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Button, Grid, Card, CardContent, List, ListItem, ListItemText, Divider, Tabs, Tab } from '@mui/material';
 import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { GET_GOLF_COURSES, GET_ACTIVE_ROUNDS, GET_ROUND } from '../graphql/queries';
-import { START_ROUND } from '../graphql/mutations';
+import { START_ROUND, END_ROUND, DISCARD_ROUND } from '../graphql/mutations';
 import { PlayerForm, Player } from '../components/PlayerForm';
 import { GameComponent } from '../components/GameComponent';
 import { HoleByHole } from '../components/HoleByHole';
@@ -44,6 +44,8 @@ export const Dashboard = () => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
   const [startRoundMutation] = useMutation(START_ROUND);
+  const [endRoundMutation] = useMutation(END_ROUND);
+  const [discardRoundMutation] = useMutation(DISCARD_ROUND);
   const [activeRound, setActiveRound] = useState<Round | null>(null);
   const [tabValue, setTabValue] = useState<number>(0);
 
@@ -57,85 +59,55 @@ export const Dashboard = () => {
     const course = coursesData?.golf_courses.find((c: GolfCourse) => c.id === courseId);
     console.log('Selected course:', course);
     setSelectedCourse(course || null);
+    
+    // Reset games when course changes
+    setSelectedGames([]);
   };
 
-  const handleAddGame = (type: GameType) => {
-    if (!selectedCourse) return;
-    const newGame = createGame(type, 'temp', selectedCourse.id);
-    setSelectedGames([...selectedGames, newGame]);
-  };
-
-  const handleRemoveGame = (gameToRemove: Game) => {
-    setSelectedGames(selectedGames.filter(game => game.id !== gameToRemove.id));
-  };
-
-  const handleUpdateGame = (updatedGame: Game) => {
-    setSelectedGames(selectedGames.map(game => 
-      game.id === updatedGame.id ? updatedGame : game
-    ));
+  const handleGameChange = (games: Game[]) => {
+    setSelectedGames(games);
   };
 
   const handleStartRound = async () => {
-    if (!selectedCourse || players.length === 0) return;
+    if (!selectedCourse || !players.length) return;
 
-    console.log('Selected course:', selectedCourse);
-    console.log('Starting round with:', {
-      course_name: selectedCourse.name,
-      players,
-      games: selectedGames,
-    });
+    const games = selectedGames.map(game => ({
+      type: game.type,
+      course_id: selectedCourse.id,
+      enabled: true,
+      settings: game.settings
+    }));
 
     try {
       const { data } = await startRoundMutation({
         variables: {
           input: {
             course_name: selectedCourse.name,
-            players: players.map(player => ({
-              id: player.id,
-              name: player.name,
-              handicap: player.handicap,
-              tee_id: player.tee_id,
+            players: players.map(p => ({
+              id: p.id,
+              name: p.name,
+              handicap: p.handicap,
+              tee_id: p.tee_id
             })),
-            games: selectedGames.map(game => ({
-              type: game.type,
-              course_id: game.course_id,
-              enabled: game.enabled,
-              settings: {
-                banker: game.type === 'banker' ? {
-                  min_dots: (game as any).min_dots,
-                  max_dots: (game as any).max_dots,
-                  dot_value: (game as any).dot_value,
-                  double_birdie_bets: (game as any).double_birdie_bets,
-                  use_gross_birdies: (game as any).use_gross_birdies,
-                  par3_triples: (game as any).par3_triples,
-                } : undefined,
-                nassau: game.type === 'nassau' ? {
-                  front_nine_bet: (game as any).front_nine_bet,
-                  back_nine_bet: (game as any).back_nine_bet,
-                  match_bet: (game as any).match_bet,
-                  auto_press: (game as any).auto_press,
-                  press_after: (game as any).press_after,
-                } : undefined,
-                skins: game.type === 'skins' ? {
-                  bet_amount: (game as any).bet_amount,
-                  carry_over: (game as any).carry_over,
-                } : undefined,
-              },
-            })),
-          },
-        },
+            games
+          }
+        }
       });
 
-      console.log('Start round response:', data);
-
       if (data?.start_round) {
-        console.log('Round started:', data.start_round);
-        setActiveRound(data.start_round as Round);
-        setPlayers([]); // Clear players after successful start
-        setSelectedGames([]); // Clear selected games
+        const round = data.start_round;
+        setActiveRound({
+          id: round.id,
+          course_name: round.course_name,
+          players: round.players,
+          holes: round.holes || [],
+          scores: round.scores || {},
+          playerTees: round.player_tees || {},
+          games: round.games || []
+        });
       }
     } catch (error) {
-      console.error('Failed to start round:', error);
+      console.error('Error starting round:', error);
     }
   };
 
@@ -156,6 +128,52 @@ export const Dashboard = () => {
         }
       }
     });
+  };
+
+  const handleEndRound = async () => {
+    if (!activeRound) return;
+
+    try {
+      const { data } = await endRoundMutation({
+        variables: {
+          round_id: activeRound.id
+        }
+      });
+
+      if (data.end_round) {
+        // Refresh active rounds list
+        await client.refetchQueries({
+          include: ['GetActiveRounds']
+        });
+        setActiveRound(null);
+      }
+    } catch (error) {
+      console.error('Error ending round:', error);
+      // TODO: Show error message to user
+    }
+  };
+
+  const handleDiscardRound = async () => {
+    if (!activeRound) return;
+
+    try {
+      const { data } = await discardRoundMutation({
+        variables: {
+          round_id: activeRound.id
+        }
+      });
+
+      if (data.discard_round) {
+        // Refresh active rounds list
+        await client.refetchQueries({
+          include: ['GetActiveRounds']
+        });
+        setActiveRound(null);
+      }
+    } catch (error) {
+      console.error('Error discarding round:', error);
+      // TODO: Show error message to user
+    }
   };
 
   const handleSelectActiveRound = async (roundId: string) => {
@@ -248,9 +266,7 @@ export const Dashboard = () => {
                     />
                     <GameComponent
                       selectedGames={selectedGames}
-                      onRemoveGame={handleRemoveGame}
-                      onAddGame={handleAddGame}
-                      onUpdateGame={handleUpdateGame}
+                      onGameChange={handleGameChange}
                     />
                     <Button
                       variant="contained"
@@ -300,31 +316,53 @@ export const Dashboard = () => {
           </Grid>
         </Grid>
       ) : (
-        <Box sx={{ width: '100%' }}>
+        <Box sx={{ mt: 4 }}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
             <Tabs value={tabValue} onChange={handleTabChange}>
-              <Tab label="Hole by Hole" />
               <Tab label="Scorecard" />
+              <Tab label="Hole by Hole" />
             </Tabs>
           </Box>
-          
+
           {tabValue === 0 && (
-            <HoleByHole 
-              players={activeRound.players}
-              holes={activeRound.holes}
-              scores={activeRound.scores}
-              onScoreChange={handleScoreChange}
-              playerTees={activeRound.playerTees}
-              games={activeRound.games}
-            />
+            <Box>
+              <Scorecard
+                players={activeRound.players}
+                scores={activeRound.scores}
+                onScoreChange={handleScoreChange}
+                playerTees={activeRound.playerTees}
+                onEndRound={handleEndRound}
+                onDiscardRound={handleDiscardRound}
+              />
+
+              {activeRound.games.length > 0 && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Game Results
+                  </Typography>
+                  {activeRound.games.map(game => (
+                    <Box key={game.id} sx={{ mb: 2 }}>
+                      <Typography variant="subtitle1">
+                        {game.type.charAt(0).toUpperCase() + game.type.slice(1)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {game.enabled ? 'Active' : 'Inactive'}
+                      </Typography>
+                      {/* Game-specific results will be implemented here */}
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
           )}
+
           {tabValue === 1 && (
-            <Scorecard 
+            <HoleByHole
               players={activeRound.players}
-              holes={activeRound.holes}
               scores={activeRound.scores}
               onScoreChange={handleScoreChange}
               playerTees={activeRound.playerTees}
+              holes={activeRound.holes}
               games={activeRound.games}
             />
           )}

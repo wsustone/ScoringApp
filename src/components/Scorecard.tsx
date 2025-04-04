@@ -1,24 +1,23 @@
-import React from 'react';
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Button, IconButton, TextField } from '@mui/material';
+import React, { useMemo } from 'react';
+import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, IconButton, TextField, Button } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
-import { useState } from 'react';
-import { Player } from './PlayerForm';
-import { Hole, ExtendedGolfTee, Game } from '../types/game';
+import { PlayerRound } from '../types/player';
+import { Hole, ExtendedGolfTee } from '../types/game';
 
 interface ScorecardProps {
-  players: Player[];
-  holes: Hole[];
+  players: PlayerRound[];
   scores: { [key: string]: { [key: number]: number | null } };
   onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
   playerTees: { [key: string]: ExtendedGolfTee };
-  games: Game[];
+  onEndRound?: () => void;
+  onDiscardRound?: () => void;
 }
 
 const calculateHandicapStrokes = (handicap: number, holes: Hole[]): { [key: number]: number } => {
   const strokes: { [key: number]: number } = {};
   
   // Sort holes by stroke index
-  const sortedHoles = [...holes].sort((a, b) => a.strokeIndex - b.strokeIndex);
+  const sortedHoles = [...holes].sort((a, b) => a.stroke_index - b.stroke_index);
   
   // Calculate strokes for each hole
   sortedHoles.forEach((hole, index) => {
@@ -48,8 +47,8 @@ interface EditScoreCellProps {
 }
 
 const EditScoreCell = ({ currentScore, onSave }: EditScoreCellProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-  const [score, setScore] = useState<string>(currentScore?.toString() || '');
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [score, setScore] = React.useState<string>(currentScore?.toString() || '');
 
   const handleSave = () => {
     const newScore = score === '' ? null : parseInt(score, 10);
@@ -96,27 +95,34 @@ const EditScoreCell = ({ currentScore, onSave }: EditScoreCellProps) => {
   );
 };
 
-export const Scorecard = ({ players, holes, scores, onScoreChange, playerTees, games }: ScorecardProps) => {
-  // Group holes into front nine and back nine
-  const frontNine = holes.filter(h => h.number <= 9);
-  const backNine = holes.filter(h => h.number > 9);
+const calculateTotals = (playerId: string, holes: Hole[], scores: { [key: string]: { [key: number]: number | null } }, handicapStrokes: { [key: number]: number }): { grossTotal: number, netTotal: number } => {
+  const playerScores = scores[playerId] || {};
+  const grossTotal = holes.reduce((sum, hole) => {
+    const score = playerScores[hole.number];
+    return sum + (score || 0);
+  }, 0);
 
-  const calculateTotals = (playerId: string, holes: Hole[]) => {
-    const playerScores = scores[playerId] || {};
-    const grossTotal = holes.reduce((sum, hole) => {
-      const score = playerScores[hole.number];
-      return sum + (score || 0);
-    }, 0);
+  const netTotal = holes.reduce((sum, hole) => {
+    const score = playerScores[hole.number];
+    if (score === null) return sum;
+    return sum + (score - (handicapStrokes[hole.number] || 0));
+  }, 0);
 
-    const handicapStrokes = calculateHandicapStrokes(players.find(p => p.id === playerId)?.handicap || 0, holes);
-    const netTotal = holes.reduce((sum, hole) => {
-      const score = playerScores[hole.number];
-      if (score === null) return sum;
-      return sum + (score - (handicapStrokes[hole.number] || 0));
-    }, 0);
+  return { grossTotal, netTotal };
+};
 
-    return { grossTotal, netTotal };
-  };
+export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRound, onDiscardRound }: ScorecardProps) => {
+  // Group holes by player since each player might have different tees
+  const playerHoles = useMemo(() => {
+    return players.reduce((acc, player) => {
+      const holes = player.holes || [];
+      acc[player.id] = {
+        frontNine: holes.filter((h: Hole) => h.number <= 9),
+        backNine: holes.filter((h: Hole) => h.number > 9)
+      };
+      return acc;
+    }, {} as { [key: string]: { frontNine: Hole[], backNine: Hole[] } });
+  }, [players]);
 
   return (
     <Box>
@@ -125,14 +131,14 @@ export const Scorecard = ({ players, holes, scores, onScoreChange, playerTees, g
           <TableHead>
             <TableRow>
               <TableCell>Player</TableCell>
-              {frontNine.map(hole => (
+              {players[0]?.holes?.filter((h: Hole) => h.number <= 9).map((hole: Hole) => (
                 <TableCell key={hole.id} align="center">
                   {hole.number}
                   <br />
                   Par {hole.par}
                   <br />
                   <Typography variant="caption" color="text.secondary">
-                    SI {hole.strokeIndex}
+                    SI {hole.stroke_index}
                   </Typography>
                 </TableCell>
               ))}
@@ -141,8 +147,9 @@ export const Scorecard = ({ players, holes, scores, onScoreChange, playerTees, g
           </TableHead>
           <TableBody>
             {players.map(player => {
-              const handicapStrokes = calculateHandicapStrokes(player.handicap, holes);
-              const { grossTotal: frontGrossTotal, netTotal: frontNetTotal } = calculateTotals(player.id, frontNine);
+              const handicapStrokes = calculateHandicapStrokes(player.handicap, player.holes || []);
+              const { frontNine } = playerHoles[player.id];
+              const { grossTotal: frontGrossTotal, netTotal: frontNetTotal } = calculateTotals(player.id, frontNine, scores, handicapStrokes);
               
               return (
                 <TableRow key={player.id}>
@@ -200,20 +207,20 @@ export const Scorecard = ({ players, holes, scores, onScoreChange, playerTees, g
         </Table>
       </TableContainer>
 
-      {backNine.length > 0 && (
+      {Object.values(playerHoles).some(player => player.backNine.length > 0) && (
         <TableContainer component={Paper} sx={{ mt: 2 }}>
           <Table size="small">
             <TableHead>
               <TableRow>
                 <TableCell>Player</TableCell>
-                {backNine.map(hole => (
+                {players[0]?.holes?.filter((h: Hole) => h.number > 9).map((hole: Hole) => (
                   <TableCell key={hole.id} align="center">
                     {hole.number}
                     <br />
                     Par {hole.par}
                     <br />
                     <Typography variant="caption" color="text.secondary">
-                      SI {hole.strokeIndex}
+                      SI {hole.stroke_index}
                     </Typography>
                   </TableCell>
                 ))}
@@ -223,9 +230,10 @@ export const Scorecard = ({ players, holes, scores, onScoreChange, playerTees, g
             </TableHead>
             <TableBody>
               {players.map(player => {
-                const handicapStrokes = calculateHandicapStrokes(player.handicap, holes);
-                const { grossTotal: backGrossTotal, netTotal: backNetTotal } = calculateTotals(player.id, backNine);
-                const { grossTotal: totalGross, netTotal: totalNet } = calculateTotals(player.id, holes);
+                const handicapStrokes = calculateHandicapStrokes(player.handicap, player.holes || []);
+                const { backNine } = playerHoles[player.id];
+                const { grossTotal: backGrossTotal, netTotal: backNetTotal } = calculateTotals(player.id, backNine, scores, handicapStrokes);
+                const { grossTotal: totalGross, netTotal: totalNet } = calculateTotals(player.id, player.holes || [], scores, handicapStrokes);
                 
                 return (
                   <TableRow key={player.id}>
@@ -291,29 +299,17 @@ export const Scorecard = ({ players, holes, scores, onScoreChange, playerTees, g
         </TableContainer>
       )}
 
-      {games.length > 0 && (
-        <Box sx={{ mt: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Game Results
-          </Typography>
-          {games.map(game => (
-            <Box key={game.id} sx={{ mb: 2 }}>
-              <Typography variant="subtitle1">
-                {game.type.charAt(0).toUpperCase() + game.type.slice(1)}
-              </Typography>
-              {/* Game-specific results will be implemented here */}
-            </Box>
-          ))}
-        </Box>
-      )}
-
       <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        <Button variant="contained" color="primary">
-          End Round
-        </Button>
-        <Button variant="outlined" color="error">
-          Discard Round
-        </Button>
+        {onEndRound && (
+          <Button variant="contained" color="primary" onClick={onEndRound}>
+            End Round
+          </Button>
+        )}
+        {onDiscardRound && (
+          <Button variant="outlined" color="error" onClick={onDiscardRound}>
+            Discard Round
+          </Button>
+        )}
       </Box>
     </Box>
   );

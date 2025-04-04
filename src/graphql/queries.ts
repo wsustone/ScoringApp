@@ -70,11 +70,19 @@ export const GET_ROUND = gql`
     get_round(id: $id) {
       id
       course_name
+      course_id
       players {
         id
         name
         tee_id
         handicap
+        holes {
+          id
+          number
+          par
+          stroke_index
+          distance
+        }
       }
       scores {
         id
@@ -103,47 +111,29 @@ export const GET_ACTIVE_ROUNDS = gql`
       status
       players {
         id
-        round_id
-        player_id
         name
-        handicap
         tee_id
+        handicap
+        holes {
+          id
+          number
+          par
+          stroke_index
+          distance
+        }
       }
       scores {
         id
         round_id
         hole_id
         player_id
-        net_score
-        gross_score
+        score
         timestamp
       }
       games {
-        id
         type
+        id
         course_id
-        enabled
-        settings {
-          banker {
-            min_dots
-            max_dots
-            dot_value
-            double_birdie_bets
-            use_gross_birdies
-            par3_triples
-          }
-          nassau {
-            front_nine_bet
-            back_nine_bet
-            match_bet
-            auto_press
-            press_after
-          }
-          skins {
-            carry_over
-            bet_amount
-          }
-        }
       }
     }
   }
