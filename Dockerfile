@@ -3,7 +3,7 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
-ARG BUILD_TYPE="build:local"
+ARG BUILD_TYPE="build"
 # Copy package files
 COPY package.json package-lock.json ./
 

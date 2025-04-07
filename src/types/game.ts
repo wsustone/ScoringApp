@@ -3,8 +3,6 @@ export type GameType = 'banker' | 'nassau' | 'skins';
 export interface BaseGame {
   id: string;
   type: GameType;
-  round_id: string;
-  course_id: string;
   enabled: boolean;
 }
 
@@ -36,57 +34,11 @@ export interface GameSettings {
   skins?: SkinsSettings;
 }
 
-export interface BankerGame extends BaseGame {
-  type: 'banker';
-  settings: {
-    banker: BankerSettings;
-  };
-  banker_data: {
-    holes: {
-      winner: string | null;
-      points: number;
-      dots: number;
-      hole_number: number;
-      doubles: string[];
-    }[];
-  };
+export interface Game extends BaseGame {
+  round_id: string;
+  course_id: string;
+  settings?: GameSettings;
 }
-
-export interface NassauGame extends BaseGame {
-  type: 'nassau';
-  settings: {
-    nassau: NassauSettings;
-  };
-  nassau_data: {
-    front_nine: {
-      winner: string | null;
-      points: number;
-    };
-    back_nine: {
-      winner: string | null;
-      points: number;
-    };
-    match: {
-      winner: string | null;
-      points: number;
-    };
-  };
-}
-
-export interface SkinsGame extends BaseGame {
-  type: 'skins';
-  settings: {
-    skins: SkinsSettings;
-  };
-  skins_data: {
-    holes: {
-      winner: string | null;
-      points: number;
-    }[];
-  };
-}
-
-export type Game = BankerGame | NassauGame | SkinsGame;
 
 export interface Hole {
   id: string;
@@ -96,7 +48,7 @@ export interface Hole {
   distance: number;
 }
 
-export interface GolfTee {
+export interface TeeSetting {
   id: string;
   name: string;
   course_rating: number;
@@ -104,15 +56,11 @@ export interface GolfTee {
   holes: Hole[];
 }
 
-export interface ExtendedGolfTee extends Omit<GolfTee, 'holes'> {
-  holes: Hole[];
-}
-
 export interface GolfCourse {
   id: string;
   name: string;
   location?: string;
-  tee_settings: GolfTee[];
+  tee_settings: TeeSetting[];
 }
 
 export interface Player {
@@ -125,15 +73,26 @@ export interface Player {
   holes?: Hole[];
 }
 
-export interface HoleData {
-  winner: string | null;
-  points: number;
+export interface Score {
+  id: string;
+  round_id: string;
+  hole_id: string;
+  player_id: string;
+  gross_score: number;
+  net_score: number;
+  has_stroke: boolean;
+  timestamp: string;
+  score: number | null;
 }
 
-export interface BankerHoleData extends HoleData {
-  dots: number;
-  hole_number: number;
-  doubles: string[];
+export interface Round {
+  id: string;
+  start_time: string;
+  end_time?: string;
+  course_name: string;
+  status: string;
+  players: Player[];
+  scores: Score[];
 }
 
 export const createGame = (type: GameType, roundId: string, courseId: string): Game => {
@@ -159,10 +118,7 @@ export const createGame = (type: GameType, roundId: string, courseId: string): G
             par3_triples: true,
           },
         },
-        banker_data: {
-          holes: [],
-        },
-      } as BankerGame;
+      } as Game;
     case 'nassau':
       return {
         ...baseGame,
@@ -176,21 +132,7 @@ export const createGame = (type: GameType, roundId: string, courseId: string): G
             press_after: 2,
           },
         },
-        nassau_data: {
-          front_nine: {
-            winner: null,
-            points: 0,
-          },
-          back_nine: {
-            winner: null,
-            points: 0,
-          },
-          match: {
-            winner: null,
-            points: 0,
-          },
-        },
-      } as NassauGame;
+      } as Game;
     case 'skins':
       return {
         ...baseGame,
@@ -201,26 +143,6 @@ export const createGame = (type: GameType, roundId: string, courseId: string): G
             carry_over: true,
           },
         },
-        skins_data: {
-          holes: [],
-        },
-      } as SkinsGame;
+      } as Game;
   }
 };
-
-export interface Round {
-  id: string;
-  start_time: string;
-  end_time?: string;
-  course_name: string;
-  status: string;
-  players: Player[];
-  scores: {
-    id: string;
-    round_id: string;
-    hole_id: string;
-    player_id: string;
-    score: number | null;
-    timestamp: string;
-  }[];
-}

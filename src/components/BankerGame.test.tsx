@@ -4,16 +4,18 @@ import { MockedProvider } from '@apollo/client/testing';
 import { BankerGame } from './BankerGame';
 import { UPDATE_SCORE } from '../graphql/mutations';
 import '@testing-library/jest-dom';
+import { PlayerRound } from '../types/player';
+import { Hole } from '../types/game';
 
-const mockPlayers = [
-  { id: 'player1', name: 'Player 1', handicap: 10, teeId: 'tee1' },
-  { id: 'player2', name: 'Player 2', handicap: 15, teeId: 'tee1' }
+const mockPlayers: PlayerRound[] = [
+  { id: 'player1', round_id: 'round1', player_id: 'p1', name: 'Player 1', handicap: 10, tee_id: 'tee1' },
+  { id: 'player2', round_id: 'round1', player_id: 'p2', name: 'Player 2', handicap: 15, tee_id: 'tee1' }
 ];
 
-const mockHoles = [
-  { id: 'hole1', number: 1, par: 4 },
-  { id: 'hole2', number: 2, par: 3 },
-  { id: 'hole3', number: 3, par: 5 }
+const mockHoles: Hole[] = [
+  { id: 'hole1', number: 1, par: 4, stroke_index: 1, distance: 400 },
+  { id: 'hole2', number: 2, par: 3, stroke_index: 2, distance: 180 },
+  { id: 'hole3', number: 3, par: 5, stroke_index: 3, distance: 520 }
 ];
 
 const mockScores = {
@@ -36,7 +38,17 @@ describe('BankerGame', () => {
     scores: mockScores,
     currentHole: 1,
     roundId: 'round1',
-    onScoreChange: jest.fn()
+    onScoreChange: jest.fn(),
+    gameSettings: {
+      banker: {
+        min_dots: 1,
+        max_dots: 4,
+        dot_value: 1,
+        double_birdie_bets: true,
+        use_gross_birdies: false,
+        par3_triples: false
+      }
+    }
   };
 
   const mocks = [
@@ -47,7 +59,7 @@ describe('BankerGame', () => {
           input: {
             roundId: 'round1',
             playerId: 'player1',
-            holeId: 1,
+            holeId: 'hole1',
             score: 4
           }
         }
@@ -56,8 +68,9 @@ describe('BankerGame', () => {
         data: {
           updateScore: {
             id: 'score1',
-            playerId: 'player1',
-            holeId: 1,
+            round_id: 'round1',
+            player_id: 'player1',
+            hole_id: 'hole1',
             score: 4,
             timestamp: new Date().toISOString()
           }

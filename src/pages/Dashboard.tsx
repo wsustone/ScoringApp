@@ -1,373 +1,314 @@
-import React, { useState } from 'react';
-import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Button, Grid, Card, CardContent, List, ListItem, ListItemText, Divider, Tabs, Tab } from '@mui/material';
-import { useQuery, useMutation, useApolloClient } from '@apollo/client';
+import { useState } from 'react';
+import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Button, Grid, Card, CardContent, List, ListItem, ListItemText, Tabs, Tab, CircularProgress } from '@mui/material';
+import { useQuery, useMutation } from '@apollo/client';
 import { GET_GOLF_COURSES, GET_ACTIVE_ROUNDS, GET_ROUND } from '../graphql/queries';
-import { START_ROUND, END_ROUND, DISCARD_ROUND } from '../graphql/mutations';
-import { PlayerForm, Player } from '../components/PlayerForm';
+import { START_ROUND, END_ROUND, DISCARD_ROUND, UPDATE_SCORE } from '../graphql/mutations';
+import { PlayerForm } from '../components/PlayerForm';
 import { GameComponent } from '../components/GameComponent';
 import { HoleByHole } from '../components/HoleByHole';
 import { Scorecard } from '../components/Scorecard';
-import { GolfCourse, Game, GameType, createGame, Hole, ExtendedGolfTee } from '../types/game';
+import { GolfCourse, Game } from '../types/game';
+import { PlayerRound } from '../types/player';
+import { Round } from '../types/round';
+import { RoundResponse } from '../types/round';
 
-interface Round {
-  id: string;
-  course_name: string;
-  players: Player[];
-  holes: Hole[];
-  scores: { [key: string]: { [key: number]: number | null } };
-  playerTees: { [key: string]: ExtendedGolfTee };
-  games: Game[];
-}
-
-interface ApiRound {
-  id: string;
-  course_name: string;
-  players: Array<{
-    id: string;
-    name: string;
-    tee_id: string;
-    handicap: number;
-  }>;
-  holes: Hole[];
-  scores: { [key: string]: { [key: number]: number | null } };
-  player_tees: { [key: string]: ExtendedGolfTee };
-  games: Array<{
-    type: string;
-    id: string;
-    course_id: string;
-  }>;
+interface GetActiveRoundsResponse {
+  get_active_rounds: Round[];
 }
 
 export const Dashboard = () => {
-  const client = useApolloClient();
   const [selectedCourse, setSelectedCourse] = useState<GolfCourse | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<PlayerRound[]>([]);
   const [selectedGames, setSelectedGames] = useState<Game[]>([]);
-  const [startRoundMutation] = useMutation(START_ROUND);
-  const [endRoundMutation] = useMutation(END_ROUND);
-  const [discardRoundMutation] = useMutation(DISCARD_ROUND);
-  const [activeRound, setActiveRound] = useState<Round | null>(null);
-  const [tabValue, setTabValue] = useState<number>(0);
+  const [selectedRound, setSelectedRound] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState(0);
 
-  const { loading: coursesLoading, error: coursesError, data: coursesData } = useQuery(GET_GOLF_COURSES);
-  const { loading: activeRoundsLoading, data: activeRoundsData } = useQuery(GET_ACTIVE_ROUNDS, {
-    pollInterval: 30000, // Poll every 30 seconds
+  const { data: coursesData, loading: coursesLoading } = useQuery<{ golf_courses: GolfCourse[] }>(GET_GOLF_COURSES);
+  const { data: activeRoundsData, loading: activeRoundsLoading } = useQuery<GetActiveRoundsResponse>(GET_ACTIVE_ROUNDS);
+  const { data: roundData, loading: roundLoading } = useQuery<{ get_round: RoundResponse }>(GET_ROUND, {
+    variables: { id: selectedRound },
+    skip: !selectedRound,
   });
 
-  const handleCourseSelect = (event: any) => {
-    const courseId = event.target.value as string;
-    const course = coursesData?.golf_courses.find((c: GolfCourse) => c.id === courseId);
-    console.log('Selected course:', course);
-    setSelectedCourse(course || null);
-    
-    // Reset games when course changes
+  const [startRound] = useMutation(START_ROUND);
+  const [endRound] = useMutation(END_ROUND);
+  const [discardRound] = useMutation(DISCARD_ROUND);
+  const [updateScore] = useMutation(UPDATE_SCORE);
+
+  const handleCourseSelect = (course: GolfCourse) => {
+    setSelectedCourse(course);
+    setPlayers([]);
     setSelectedGames([]);
   };
 
-  const handleGameChange = (games: Game[]) => {
-    setSelectedGames(games);
-  };
-
   const handleStartRound = async () => {
-    if (!selectedCourse || !players.length) return;
-
-    const games = selectedGames.map(game => ({
-      type: game.type,
-      course_id: selectedCourse.id,
-      enabled: true,
-      settings: game.settings
-    }));
+    if (!selectedCourse || players.length === 0 || selectedGames.length === 0) return;
 
     try {
-      const { data } = await startRoundMutation({
+      const { data } = await startRound({
         variables: {
           input: {
-            course_name: selectedCourse.name,
+            course_id: selectedCourse.id,
             players: players.map(p => ({
-              id: p.id,
+              player_id: p.player_id,
               name: p.name,
               handicap: p.handicap,
-              tee_id: p.tee_id
+              tee_id: p.tee_id,
             })),
-            games
-          }
-        }
+            games: selectedGames.map(g => ({
+              type: g.type,
+              enabled: g.enabled,
+              settings: g.settings,
+            })),
+          },
+        },
       });
 
-      if (data?.start_round) {
-        const round = data.start_round;
-        setActiveRound({
-          id: round.id,
-          course_name: round.course_name,
-          players: round.players,
-          holes: round.holes || [],
-          scores: round.scores || {},
-          playerTees: round.player_tees || {},
-          games: round.games || []
-        });
-      }
+      setSelectedRound(data.startRound.id);
+      setActiveTab(1);
     } catch (error) {
       console.error('Error starting round:', error);
     }
   };
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
-  };
-
-  const handleScoreChange = (playerId: string, holeNumber: number, score: number | null) => {
-    if (!activeRound) return;
-    
-    setActiveRound({
-      ...activeRound,
-      scores: {
-        ...activeRound.scores,
-        [playerId]: {
-          ...activeRound.scores[playerId],
-          [holeNumber]: score
-        }
-      }
-    });
-  };
-
   const handleEndRound = async () => {
-    if (!activeRound) return;
+    if (!selectedRound) return;
 
     try {
-      const { data } = await endRoundMutation({
+      await endRound({
         variables: {
-          round_id: activeRound.id
-        }
+          input: {
+            round_id: selectedRound,
+          },
+        },
       });
 
-      if (data.end_round) {
-        // Refresh active rounds list
-        await client.refetchQueries({
-          include: ['GetActiveRounds']
-        });
-        setActiveRound(null);
-      }
+      setSelectedRound(null);
+      setActiveTab(0);
     } catch (error) {
       console.error('Error ending round:', error);
-      // TODO: Show error message to user
     }
   };
 
-  const handleDiscardRound = async () => {
-    if (!activeRound) return;
-
+  const handleDiscardRound = async (roundId: string) => {
     try {
-      const { data } = await discardRoundMutation({
+      await discardRound({
         variables: {
-          round_id: activeRound.id
-        }
+          id: roundId,
+        },
       });
 
-      if (data.discard_round) {
-        // Refresh active rounds list
-        await client.refetchQueries({
-          include: ['GetActiveRounds']
-        });
-        setActiveRound(null);
+      // If we're discarding the currently selected round, reset the UI
+      if (selectedRound === roundId) {
+        setSelectedRound(null);
+        setActiveTab(0);
       }
     } catch (error) {
       console.error('Error discarding round:', error);
-      // TODO: Show error message to user
     }
   };
 
-  const handleSelectActiveRound = async (roundId: string) => {
+  const handleEndCurrentRound = () => handleEndRound();
+  const handleDiscardCurrentRound = () => handleDiscardRound(selectedRound!);
+
+  const handleScoreUpdate = async (playerId: string, holeId: string, score: number) => {
+    if (!selectedRound) return;
+
     try {
-      const { data } = await client.query<{ get_round: ApiRound }>({
-        query: GET_ROUND,
-        variables: { id: roundId }
+      await updateScore({
+        variables: {
+          input: {
+            round_id: selectedRound,
+            player_id: playerId,
+            hole_id: holeId,
+            score,
+          },
+        },
       });
-
-      if (data?.get_round) {
-        const apiRound = data.get_round;
-        
-        // Transform the data to match our frontend types
-        const round: Round = {
-          id: apiRound.id,
-          course_name: apiRound.course_name,
-          players: apiRound.players.map(player => ({
-            id: player.id,
-            name: player.name,
-            tee_id: player.tee_id,
-            handicap: player.handicap
-          })),
-          holes: apiRound.holes,
-          scores: apiRound.scores,
-          playerTees: apiRound.player_tees,
-          games: apiRound.games.map(game => createGame(game.type as GameType, apiRound.id, game.course_id))
-        };
-        
-        setActiveRound(round);
-        
-        // Find and set the course
-        const course = coursesData?.golf_courses.find((c: GolfCourse) => c.name === round.course_name);
-        if (course) {
-          setSelectedCourse(course);
-        }
-        
-        // Set players
-        setPlayers(round.players);
-        
-        // Set games
-        setSelectedGames(round.games);
-      }
     } catch (error) {
-      console.error('Failed to load round:', error);
+      console.error('Error updating score:', error);
     }
   };
+
+  const handleScoreChange = (playerId: string, holeNumber: number, score: number | null) => {
+    if (!roundData?.get_round) return;
+    const hole = roundData.get_round.course.holes.find(h => h.number === holeNumber);
+    if (!hole) return;
+    handleScoreUpdate(playerId, hole.id, score ?? 0);
+  };
+
+  const renderSetupTab = () => (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Select Course
+      </Typography>
+      <FormControl fullWidth sx={{ mb: 4 }}>
+        <InputLabel>Course</InputLabel>
+        <Select
+          value={selectedCourse?.id || ''}
+          onChange={(e) => {
+            const course = coursesData?.golf_courses.find(c => c.id === e.target.value);
+            if (course) handleCourseSelect(course);
+          }}
+        >
+          {coursesData?.golf_courses.map((course) => (
+            <MenuItem key={course.id} value={course.id}>
+              {course.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      {selectedCourse && (
+        <>
+          <Typography variant="h5" gutterBottom>
+            Add Players
+          </Typography>
+          <Box sx={{ mb: 4 }}>
+            <PlayerForm
+              players={players}
+              onPlayersChange={setPlayers}
+              teeSettings={selectedCourse.tee_settings}
+            />
+          </Box>
+
+          <Typography variant="h5" gutterBottom>
+            Select Games
+          </Typography>
+          <Box sx={{ mb: 4 }}>
+            <GameComponent
+              selectedGames={selectedGames}
+              onGameChange={setSelectedGames}
+            />
+          </Box>
+
+          <Button
+            variant="contained"
+            onClick={handleStartRound}
+            disabled={players.length === 0 || selectedGames.length === 0}
+          >
+            Start Round
+          </Button>
+        </>
+      )}
+    </Box>
+  );
+
+  const renderActiveRoundsTab = () => (
+    <Box>
+      <Typography variant="h5" gutterBottom>
+        Active Rounds
+      </Typography>
+      <Grid container spacing={2}>
+        {activeRoundsData?.get_active_rounds.map((round) => (
+          <Grid item xs={12} sm={6} md={4} key={round.id}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {round.course_name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Started: {new Date(round.start_time).toLocaleString()}
+                </Typography>
+                <List>
+                  {round.players.map((player) => (
+                    <ListItem key={player.id}>
+                      <ListItemText primary={player.name} secondary={`HCP: ${player.handicap}`} />
+                    </ListItem>
+                  ))}
+                </List>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    onClick={() => {
+                      setSelectedRound(round.id);
+                      setActiveTab(2);
+                    }}
+                  >
+                    View Round
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    fullWidth
+                    onClick={() => handleDiscardRound(round.id)}
+                  >
+                    Discard
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+
+  const renderRoundTab = () => {
+    if (!roundData?.get_round) return null;
+
+    const round = roundData.get_round;
+
+    return (
+      <Box>
+        <Typography variant="h5" gutterBottom>
+          {round.course_name}
+        </Typography>
+        <Box sx={{ mb: 4 }}>
+          <HoleByHole
+            players={round.players}
+            onScoreUpdate={handleScoreUpdate}
+            scores={round.scores}
+            holes={round.course.holes}
+            playerTees={round.player_tees}
+            games={round.games}
+          />
+        </Box>
+        <Box sx={{ mb: 4 }}>
+          <Scorecard
+            players={round.players}
+            scores={round.scores}
+            games={round.games}
+            on_score_change={handleScoreChange}
+            player_tees={round.player_tees}
+            on_end_round={handleEndRound}
+            on_discard_round={handleDiscardRound}
+          />
+        </Box>
+        <Box>
+          <Button variant="contained" color="primary" onClick={handleEndCurrentRound} sx={{ mr: 2 }}>
+            End Round
+          </Button>
+          <Button variant="outlined" color="error" onClick={handleDiscardCurrentRound} sx={{ mr: 2 }}>
+            Discard Round
+          </Button>
+        </Box>
+      </Box>
+    );
+  };
+
+  if (coursesLoading || activeRoundsLoading || roundLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box p={3}>
       <Typography variant="h4" gutterBottom>
-        Golf Scoring Dashboard
+        Golf Scoring
       </Typography>
-
-      {!activeRound ? (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={8}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Start New Round
-                </Typography>
-
-                {coursesLoading ? (
-                  <Typography>Loading courses...</Typography>
-                ) : coursesError ? (
-                  <Typography color="error">Error loading courses!</Typography>
-                ) : (
-                  <FormControl fullWidth margin="normal">
-                    <InputLabel>Select Course</InputLabel>
-                    <Select
-                      value={selectedCourse?.id || ''}
-                      onChange={handleCourseSelect}
-                      label="Select Course"
-                    >
-                      {coursesData?.golf_courses?.map((course: GolfCourse) => (
-                        <MenuItem key={course.id} value={course.id}>
-                          {course.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                )}
-
-                {selectedCourse && (
-                  <>
-                    <PlayerForm
-                      tee_settings={selectedCourse.tee_settings}
-                      onPlayersChange={setPlayers}
-                      players={players}
-                    />
-                    <GameComponent
-                      selectedGames={selectedGames}
-                      onGameChange={handleGameChange}
-                    />
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={handleStartRound}
-                      disabled={!players.length}
-                      sx={{ mt: 2 }}
-                    >
-                      Start Round
-                    </Button>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Active Rounds
-                </Typography>
-                {activeRoundsLoading ? (
-                  <Typography>Loading active rounds...</Typography>
-                ) : activeRoundsData?.get_active_rounds?.length ? (
-                  <List>
-                    {activeRoundsData.get_active_rounds.map((round: any) => (
-                      <div key={round.id}>
-                        <ListItem
-                          button
-                          onClick={() => handleSelectActiveRound(round.id)}
-                        >
-                          <ListItemText
-                            primary={round.course_name}
-                            secondary={`Players: ${round.players.length}`}
-                          />
-                        </ListItem>
-                        <Divider />
-                      </div>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography>No active rounds</Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      ) : (
-        <Box sx={{ mt: 4 }}>
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={tabValue} onChange={handleTabChange}>
-              <Tab label="Scorecard" />
-              <Tab label="Hole by Hole" />
-            </Tabs>
-          </Box>
-
-          {tabValue === 0 && (
-            <Box>
-              <Scorecard
-                players={activeRound.players}
-                scores={activeRound.scores}
-                onScoreChange={handleScoreChange}
-                playerTees={activeRound.playerTees}
-                onEndRound={handleEndRound}
-                onDiscardRound={handleDiscardRound}
-              />
-
-              {activeRound.games.length > 0 && (
-                <Box sx={{ mt: 3 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Game Results
-                  </Typography>
-                  {activeRound.games.map(game => (
-                    <Box key={game.id} sx={{ mb: 2 }}>
-                      <Typography variant="subtitle1">
-                        {game.type.charAt(0).toUpperCase() + game.type.slice(1)}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {game.enabled ? 'Active' : 'Inactive'}
-                      </Typography>
-                      {/* Game-specific results will be implemented here */}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          )}
-
-          {tabValue === 1 && (
-            <HoleByHole
-              players={activeRound.players}
-              scores={activeRound.scores}
-              onScoreChange={handleScoreChange}
-              playerTees={activeRound.playerTees}
-              holes={activeRound.holes}
-              games={activeRound.games}
-            />
-          )}
-        </Box>
-      )}
+      <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)} sx={{ mb: 3 }}>
+        <Tab label="Setup New Round" />
+        <Tab label="Active Rounds" />
+        {selectedRound && <Tab label="Current Round" />}
+      </Tabs>
+      {activeTab === 0 && renderSetupTab()}
+      {activeTab === 1 && renderActiveRoundsTab()}
+      {activeTab === 2 && renderRoundTab()}
     </Box>
   );
 };

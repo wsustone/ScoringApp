@@ -1,4 +1,5 @@
 import { gql } from '@apollo/client';
+import { RoundResponse } from '../types/round';
 
 export const GET_GOLF_COURSES = gql`
   query GetGolfCourses {
@@ -50,12 +51,12 @@ export const GET_COURSE_HOLES = gql`
   query GetCourseHoles($course_id: ID!) {
     golf_course(id: $course_id) {
       id
-      tees {
+      tee_settings {
         id
         name
         holes {
           id
-          hole_number
+          number
           par
           stroke_index
           distance
@@ -65,37 +66,42 @@ export const GET_COURSE_HOLES = gql`
   }
 `;
 
-export const GET_ROUND = gql`
-  query GetRound($id: ID!) {
-    get_round(id: $id) {
+export const START_ROUND = gql`
+  mutation StartRound($input: StartRoundInput!) {
+    start_round(input: $input) {
       id
-      course_name
-      course_id
+      start_time
+      end_time
       players {
         id
         name
         tee_id
-        handicap
-        holes {
-          id
-          number
-          par
-          stroke_index
-          distance
-        }
-      }
-      scores {
-        id
-        round_id
-        hole_id
-        player_id
-        score
-        timestamp
       }
       games {
-        type
         id
-        course_id
+        type
+        enabled
+        settings {
+          banker {
+            min_dots
+            max_dots
+            dot_value
+            double_birdie_bets
+            use_gross_birdies
+            par3_triples
+          }
+          nassau {
+            front_nine_bet
+            back_nine_bet
+            match_bet
+            auto_press
+            press_after
+          }
+          skins {
+            carry_over
+            bet_amount
+          }
+        }
       }
     }
   }
@@ -105,15 +111,57 @@ export const GET_ACTIVE_ROUNDS = gql`
   query GetActiveRounds {
     get_active_rounds {
       id
-      start_time
-      end_time
+      course_id
       course_name
       status
+      start_time
+      end_time
       players {
         id
+        round_id
+        player_id
         name
-        tee_id
         handicap
+        tee_id
+      }
+      scores {
+        id
+        round_id
+        hole_id
+        player_id
+        gross_score
+        net_score
+        has_stroke
+        timestamp
+      }
+    }
+  }
+`;
+
+export const GET_ROUND_SUMMARY = gql`
+  query GetRoundSummary($id: ID!) {
+    get_round(id: $id) {
+      id
+      course_id
+      course_name
+      status
+      start_time
+      end_time
+    }
+  }
+`;
+
+export const GET_ROUND_PLAYERS = gql`
+  query GetRoundPlayers($id: ID!) {
+    get_round(id: $id) {
+      id
+      players {
+        id
+        round_id
+        player_id
+        name
+        handicap
+        tee_id
         holes {
           id
           number
@@ -122,19 +170,280 @@ export const GET_ACTIVE_ROUNDS = gql`
           distance
         }
       }
+    }
+  }
+`;
+
+export const GET_ROUND_SCORES = gql`
+  query GetRoundScores($id: ID!) {
+    get_round(id: $id) {
+      id
       scores {
         id
         round_id
         hole_id
         player_id
-        score
+        gross_score
+        net_score
+        has_stroke
         timestamp
-      }
-      games {
-        type
-        id
-        course_id
+        score
       }
     }
   }
 `;
+
+const BANKER_GAME_FRAGMENT = gql`
+  fragment BankerGameFields on Game {
+    id
+    type
+    enabled
+    settings {
+      banker {
+        min_dots
+        max_dots
+        dot_value
+        double_birdie_bets
+        use_gross_birdies
+        par3_triples
+      }
+    }
+  }
+`;
+
+const NASSAU_GAME_FRAGMENT = gql`
+  fragment NassauGameFields on Game {
+    id
+    type
+    enabled
+    settings {
+      nassau {
+        front_nine_bet
+        back_nine_bet
+        match_bet
+        auto_press
+        press_after
+      }
+    }
+  }
+`;
+
+const SKINS_GAME_FRAGMENT = gql`
+  fragment SkinsGameFields on Game {
+    id
+    type
+    enabled
+    settings {
+      skins {
+        carry_over
+        bet_amount
+      }
+    }
+  }
+`;
+
+export const GET_ROUND_GAMES = gql`
+  ${BANKER_GAME_FRAGMENT}
+  ${NASSAU_GAME_FRAGMENT}
+  ${SKINS_GAME_FRAGMENT}
+  query GetRoundGames($id: ID!) {
+    get_round(id: $id) {
+      id
+      games {
+        id
+        round_id
+        type
+        course_id
+        enabled
+        ...BankerGameFields
+        ...NassauGameFields
+        ...SkinsGameFields
+      }
+    }
+  }
+`;
+
+export const GET_SCORECARD = gql`
+  query GetScorecard($round_id: ID!) {
+    scorecard(round_id: $round_id) {
+      id
+      course_name
+      players {
+        id
+        name
+        handicap
+      }
+      holes {
+        id
+        number
+        par
+        stroke_index
+        distance
+      }
+      scores {
+        id
+        round_id
+        hole_id
+        player_id
+        gross_score
+        net_score
+        has_stroke
+        timestamp
+        score
+      }
+    }
+  }
+`;
+
+export const GET_ROUND = gql`
+  query GetRound($id: ID!) {
+    get_round(id: $id) {
+      id
+      course_id
+      course_name
+      status
+      start_time
+      end_time
+      players {
+        id
+        round_id
+        player_id
+        name
+        handicap
+        tee_id
+      }
+      scores {
+        id
+        round_id
+        hole_id
+        player_id
+        gross_score
+        net_score
+        has_stroke
+        timestamp
+      }
+      games {
+        id
+        round_id
+        course_id
+        type
+        enabled
+        settings {
+          banker {
+            min_dots
+            max_dots
+            dot_value
+            double_birdie_bets
+            use_gross_birdies
+            par3_triples
+          }
+          nassau {
+            front_nine_bet
+            back_nine_bet
+            match_bet
+            auto_press
+            press_after
+          }
+          skins {
+            bet_amount
+            carry_over
+          }
+        }
+      }
+      course {
+        holes {
+          id
+          number
+          par
+          stroke_index
+          distance
+        }
+      }
+      player_tees {
+        id
+        name
+        course_rating
+        slope_rating
+        holes {
+          id
+          number
+          par
+          stroke_index
+          distance
+        }
+      }
+    }
+  }
+`;
+
+export interface Score {
+  id: string;
+  player_id: string;
+  hole_id: string;
+  score: number | null;
+  timestamp: string;
+}
+
+export interface GameResult {
+  player_id: string;
+  total_points: number;
+  total_winnings: number;
+}
+
+export interface ScorecardPlayer {
+  id: string;
+  name: string;
+  tee_id: string;
+  scores: {
+    hole_id: string;
+    score: number | null;
+  }[];
+}
+
+export interface ScorecardGame {
+  id: string;
+  type: string;
+  enabled: boolean;
+  min_dots?: number;
+  max_dots?: number;
+  dot_value?: number;
+  double_birdie_bets?: boolean;
+  use_gross_birdies?: boolean;
+  par3_triples?: boolean;
+  match_bet?: number;
+  auto_press?: boolean;
+  skin_value?: number;
+  carry_over?: boolean;
+  front_nine_bet?: number;
+  back_nine_bet?: number;
+  results: GameResult[];
+}
+
+export interface Scorecard {
+  round_id: string;
+  players: ScorecardPlayer[];
+  games: ScorecardGame[];
+}
+
+export interface UpdateScoreResponse {
+  update_score: Score;
+}
+
+export interface EndRoundResponse {
+  end_round: {
+    id: string;
+    end_time: string;
+  };
+}
+
+export interface GetScorecardResponse {
+  scorecard: Scorecard;
+}
+
+export interface GetRoundResponse {
+  get_round: RoundResponse;
+}
+
+export interface GetActiveRoundsResponse {
+  get_active_rounds: RoundResponse[];
+}

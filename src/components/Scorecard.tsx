@@ -1,80 +1,83 @@
 import React, { useMemo } from 'react';
-import { Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, IconButton, TextField, Button } from '@mui/material';
+import { 
+  Box, 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableContainer, 
+  TableHead, 
+  TableRow, 
+  Paper, 
+  Typography, 
+  IconButton, 
+  TextField, 
+  Button,
+  Tooltip,
+  CircularProgress,
+  useTheme,
+  useMediaQuery,
+  Alert
+} from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { PlayerRound } from '../types/player';
+import { Game } from '../types/game';
 import { Hole, ExtendedGolfTee } from '../types/game';
+
+interface Score {
+  id: string;
+  round_id: string;
+  hole_id: string;
+  player_id: string;
+  score: number | null;
+  timestamp: string;
+}
 
 interface ScorecardProps {
   players: PlayerRound[];
-  scores: { [key: string]: { [key: number]: number | null } };
-  onScoreChange: (playerId: string, holeNumber: number, score: number | null) => void;
-  playerTees: { [key: string]: ExtendedGolfTee };
-  onEndRound?: () => void;
-  onDiscardRound?: () => void;
+  scores: Score[];
+  games: Game[];
+  on_score_change: (player_id: string, hole_number: number, score: number | null) => void;
+  player_tees: { [key: string]: ExtendedGolfTee };
+  on_end_round?: () => void;
+  on_discard_round?: () => void;
+  loading?: boolean;
+  error?: string;
 }
-
-const calculateHandicapStrokes = (handicap: number, holes: Hole[]): { [key: number]: number } => {
-  const strokes: { [key: number]: number } = {};
-  
-  // Sort holes by stroke index
-  const sortedHoles = [...holes].sort((a, b) => a.stroke_index - b.stroke_index);
-  
-  // Calculate strokes for each hole
-  sortedHoles.forEach((hole, index) => {
-    const strokesForHole = Math.floor(handicap / 18); // Base strokes
-    const extraStroke = index < (handicap % 18) ? 1 : 0; // Extra stroke for harder holes
-    strokes[hole.number] = strokesForHole + extraStroke;
-  });
-  
-  return strokes;
-};
-
-const calculateNetScore = (grossScore: number | null, handicapStrokes: number): number | null => {
-  if (grossScore === null) return null;
-  return grossScore - handicapStrokes;
-};
-
-const getScoreColor = (score: number | null, par: number): string => {
-  if (score === null) return 'inherit';
-  if (score < par) return '#dc3545'; // red for under par
-  if (score === par) return '#0d6efd'; // blue for par
-  return 'inherit'; // black for over par
-};
 
 interface EditScoreCellProps {
-  currentScore: number | null;
-  onSave: (score: number | null) => void;
+  current_score: number | null;
+  on_save: (score: number | null) => void;
 }
 
-const EditScoreCell = ({ currentScore, onSave }: EditScoreCellProps) => {
-  const [isEditing, setIsEditing] = React.useState(false);
-  const [score, setScore] = React.useState<string>(currentScore?.toString() || '');
+const EditScoreCell = ({ current_score, on_save }: EditScoreCellProps) => {
+  const [is_editing, set_is_editing] = React.useState(false);
+  const [score, set_score] = React.useState<string>(current_score?.toString() || '');
 
-  const handleSave = () => {
-    const newScore = score === '' ? null : parseInt(score, 10);
-    if (newScore === null || (!isNaN(newScore) && newScore >= 1)) {
-      onSave(newScore);
-      setIsEditing(false);
+  const handle_save = () => {
+    const new_score = score === '' ? null : parseInt(score, 10);
+    if (new_score === null || (!isNaN(new_score) && new_score >= 1)) {
+      on_save(new_score);
+      set_is_editing(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handle_key_press = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
-      handleSave();
+      handle_save();
     } else if (e.key === 'Escape') {
-      setIsEditing(false);
-      setScore(currentScore?.toString() || '');
+      set_is_editing(false);
+      set_score(current_score?.toString() || '');
     }
   };
 
-  return isEditing ? (
+  return is_editing ? (
     <TextField
       autoFocus
       size="small"
       value={score}
-      onChange={(e) => setScore(e.target.value)}
-      onBlur={handleSave}
-      onKeyDown={handleKeyPress}
+      onChange={(e) => set_score(e.target.value)}
+      onBlur={handle_save}
+      onKeyDown={handle_key_press}
       inputProps={{
         style: { padding: '2px', textAlign: 'center', width: '30px' },
         min: 1,
@@ -83,10 +86,10 @@ const EditScoreCell = ({ currentScore, onSave }: EditScoreCellProps) => {
     />
   ) : (
     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span>{currentScore || '-'}</span>
+      <span>{current_score || '-'}</span>
       <IconButton
         size="small"
-        onClick={() => setIsEditing(true)}
+        onClick={() => set_is_editing(true)}
         sx={{ ml: 0.5, opacity: 0.3, '&:hover': { opacity: 1 } }}
       >
         <EditIcon fontSize="inherit" />
@@ -95,38 +98,151 @@ const EditScoreCell = ({ currentScore, onSave }: EditScoreCellProps) => {
   );
 };
 
-const calculateTotals = (playerId: string, holes: Hole[], scores: { [key: string]: { [key: number]: number | null } }, handicapStrokes: { [key: number]: number }): { grossTotal: number, netTotal: number } => {
-  const playerScores = scores[playerId] || {};
-  const grossTotal = holes.reduce((sum, hole) => {
-    const score = playerScores[hole.number];
-    return sum + (score || 0);
-  }, 0);
-
-  const netTotal = holes.reduce((sum, hole) => {
-    const score = playerScores[hole.number];
-    if (score === null) return sum;
-    return sum + (score - (handicapStrokes[hole.number] || 0));
-  }, 0);
-
-  return { grossTotal, netTotal };
+const calculate_handicap_strokes = (handicap: number, holes: Hole[]): { [key: number]: number } => {
+  const strokes: { [key: number]: number } = {};
+  
+  // Sort holes by stroke index
+  const sorted_holes = [...holes].sort((a, b) => a.stroke_index - b.stroke_index);
+  
+  // Calculate strokes for each hole
+  sorted_holes.forEach((hole, index) => {
+    const strokes_for_hole = Math.floor(handicap / 18); // Base strokes
+    const extra_stroke = index < (handicap % 18) ? 1 : 0; // Extra stroke for harder holes
+    strokes[hole.number] = strokes_for_hole + extra_stroke;
+  });
+  
+  return strokes;
 };
 
-export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRound, onDiscardRound }: ScorecardProps) => {
+const calculate_net_score = (gross_score: number | null, handicap_strokes: number): number | null => {
+  if (gross_score === null) return null;
+  return gross_score - handicap_strokes;
+};
+
+const get_score_color = (score: number | null, par: number): string => {
+  if (score === null) return 'inherit';
+  if (score < par) return '#dc3545'; // red for under par
+  if (score === par) return '#0d6efd'; // blue for par
+  return 'inherit'; // black for over par
+};
+
+const calculate_totals = (player_id: string, holes: Hole[], scores: Score[], handicap_strokes: { [key: number]: number }): { net_total: number } => {
+  const player_scores = scores.filter(s => s.player_id === player_id);
+
+  const net_total = holes.reduce((sum, hole) => {
+    const score = player_scores.find(s => s.hole_id === `hole${hole.number}`)?.score;
+    if (score === null || score === undefined) return sum;
+    return sum + (score - (handicap_strokes[hole.number] || 0));
+  }, 0);
+
+  return { net_total };
+};
+
+const ScoreLegend = () => {
+  return (
+    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+      <Typography variant="caption" sx={{ color: '#dc3545' }}>● Under Par</Typography>
+      <Typography variant="caption" sx={{ color: '#0d6efd' }}>● Par</Typography>
+      <Typography variant="caption">● Over Par</Typography>
+      <Tooltip title="Handicap strokes are shown with asterisks (*)">
+        <Typography variant="caption" sx={{ ml: 2 }}>* Handicap Stroke</Typography>
+      </Tooltip>
+    </Box>
+  );
+};
+
+export const Scorecard = ({ 
+  players, 
+  scores, 
+  games, 
+  on_score_change, 
+  player_tees, 
+  on_end_round, 
+  on_discard_round,
+  loading = false,
+  error
+}: ScorecardProps) => {
+  const theme = useTheme();
+  const is_mobile = useMediaQuery(theme.breakpoints.down('sm'));
+
   // Group holes by player since each player might have different tees
-  const playerHoles = useMemo(() => {
+  const player_holes = useMemo(() => {
     return players.reduce((acc, player) => {
       const holes = player.holes || [];
       acc[player.id] = {
-        frontNine: holes.filter((h: Hole) => h.number <= 9),
-        backNine: holes.filter((h: Hole) => h.number > 9)
+        front_nine: holes.filter((h: Hole) => h.number <= 9),
+        back_nine: holes.filter((h: Hole) => h.number > 9)
       };
       return acc;
-    }, {} as { [key: string]: { frontNine: Hole[], backNine: Hole[] } });
+    }, {} as { [key: string]: { front_nine: Hole[], back_nine: Hole[] } });
   }, [players]);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert severity="error" sx={{ mb: 2 }}>
+        {error}
+      </Alert>
+    );
+  }
+
+  const get_player_score = (player_id: string, hole_number: number): number | null => {
+    const score = scores.find(s => s.player_id === player_id && s.hole_id === `hole${hole_number}`);
+    return score ? score.score : null;
+  };
+
+  const hole_numbers = {
+    front: Array.from({ length: 9 }, (_, i) => i + 1),
+    back: Array.from({ length: 9 }, (_, i) => i + 10)
+  };
+
+  const calculate_front_nine = (player_id: string): number => {
+    let total = 0;
+    for (const hole_number of hole_numbers.front) {
+      const score = get_player_score(player_id, hole_number);
+      if (score !== null) {
+        total += score;
+      }
+    }
+    return total;
+  };
+
+  const calculate_back_nine = (player_id: string): number => {
+    let total = 0;
+    for (const hole_number of hole_numbers.back) {
+      const score = get_player_score(player_id, hole_number);
+      if (score !== null) {
+        total += score;
+      }
+    }
+    return total;
+  };
+
+  const calculate_total = (player_id: string): number => {
+    return calculate_front_nine(player_id) + calculate_back_nine(player_id);
+  };
 
   return (
     <Box>
-      <TableContainer component={Paper}>
+      <ScoreLegend />
+      <TableContainer 
+        component={Paper} 
+        sx={{ 
+          maxWidth: '100%',
+          overflowX: 'auto',
+          '.MuiTableCell-root': {
+            p: is_mobile ? 1 : 2,
+            minWidth: is_mobile ? '40px' : 'auto'
+          }
+        }}
+      >
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -147,9 +263,9 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRou
           </TableHead>
           <TableBody>
             {players.map(player => {
-              const handicapStrokes = calculateHandicapStrokes(player.handicap, player.holes || []);
-              const { frontNine } = playerHoles[player.id];
-              const { grossTotal: frontGrossTotal, netTotal: frontNetTotal } = calculateTotals(player.id, frontNine, scores, handicapStrokes);
+              const handicap_strokes = calculate_handicap_strokes(player.handicap, player.holes || []);
+              const { front_nine: front_holes } = player_holes[player.id];
+              const { net_total: front_net_total } = calculate_totals(player.id, front_holes, scores, handicap_strokes);
               
               return (
                 <TableRow key={player.id}>
@@ -159,45 +275,47 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRou
                     <Typography variant="caption">
                       HCP: {player.handicap}
                       <br />
-                      {playerTees[player.id]?.name}
+                      {player_tees[player.id]?.name}
                     </Typography>
                   </TableCell>
-                  {frontNine.map(hole => {
-                    const grossScore = scores[player.id]?.[hole.number] || null;
-                    const netScore = calculateNetScore(grossScore, handicapStrokes[hole.number] || 0);
+                  {front_holes.map(hole => {
+                    const gross_score = get_player_score(player.id, hole.number);
+                    const net_score = calculate_net_score(gross_score, handicap_strokes[hole.number] || 0);
                     
                     return (
                       <TableCell key={hole.id} align="center" sx={{ position: 'relative' }}>
-                        <Box sx={{ color: getScoreColor(grossScore, hole.par) }}>
+                        <Box sx={{ color: get_score_color(gross_score, hole.par) }}>
                           <EditScoreCell
-                            currentScore={grossScore}
-                            onSave={(score) => onScoreChange(player.id, hole.number, score)}
+                            current_score={gross_score}
+                            on_save={(score) => on_score_change(player.id, hole.number, score)}
                           />
                         </Box>
                         <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                          {netScore !== null ? netScore : '-'}
+                          {net_score !== null ? net_score : '-'}
                         </Box>
-                        {handicapStrokes[hole.number] > 0 && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              position: 'absolute',
-                              top: 2,
-                              right: 2,
-                              fontSize: '0.6rem',
-                            }}
-                          >
-                            {'*'.repeat(handicapStrokes[hole.number])}
-                          </Typography>
+                        {handicap_strokes[hole.number] > 0 && (
+                          <Tooltip title="Handicap strokes are shown with asterisks (*)">
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                fontSize: '0.6rem',
+                              }}
+                            >
+                              {'*'.repeat(handicap_strokes[hole.number])}
+                            </Typography>
+                          </Tooltip>
                         )}
                       </TableCell>
                     );
                   })}
                   <TableCell align="center">
-                    {frontGrossTotal}
+                    {calculate_front_nine(player.id)}
                     <br />
                     <Typography variant="caption">
-                      {frontNetTotal}
+                      {front_net_total}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -207,8 +325,19 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRou
         </Table>
       </TableContainer>
 
-      {Object.values(playerHoles).some(player => player.backNine.length > 0) && (
-        <TableContainer component={Paper} sx={{ mt: 2 }}>
+      {Object.values(player_holes).some(player => player.back_nine.length > 0) && (
+        <TableContainer 
+          component={Paper} 
+          sx={{ 
+            mt: 2,
+            maxWidth: '100%',
+            overflowX: 'auto',
+            '.MuiTableCell-root': {
+              p: is_mobile ? 1 : 2,
+              minWidth: is_mobile ? '40px' : 'auto'
+            }
+          }}
+        >
           <Table size="small">
             <TableHead>
               <TableRow>
@@ -230,10 +359,10 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRou
             </TableHead>
             <TableBody>
               {players.map(player => {
-                const handicapStrokes = calculateHandicapStrokes(player.handicap, player.holes || []);
-                const { backNine } = playerHoles[player.id];
-                const { grossTotal: backGrossTotal, netTotal: backNetTotal } = calculateTotals(player.id, backNine, scores, handicapStrokes);
-                const { grossTotal: totalGross, netTotal: totalNet } = calculateTotals(player.id, player.holes || [], scores, handicapStrokes);
+                const handicap_strokes = calculate_handicap_strokes(player.handicap, player.holes || []);
+                const { back_nine: back_holes } = player_holes[player.id];
+                const { net_total: back_net_total } = calculate_totals(player.id, back_holes, scores, handicap_strokes);
+                const { net_total: total_net } = calculate_totals(player.id, player.holes || [], scores, handicap_strokes);
                 
                 return (
                   <TableRow key={player.id}>
@@ -243,52 +372,54 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRou
                       <Typography variant="caption">
                         HCP: {player.handicap}
                         <br />
-                        {playerTees[player.id]?.name}
+                        {player_tees[player.id]?.name}
                       </Typography>
                     </TableCell>
-                    {backNine.map(hole => {
-                      const grossScore = scores[player.id]?.[hole.number] || null;
-                      const netScore = calculateNetScore(grossScore, handicapStrokes[hole.number] || 0);
+                    {back_holes.map(hole => {
+                      const gross_score = get_player_score(player.id, hole.number);
+                      const net_score = calculate_net_score(gross_score, handicap_strokes[hole.number] || 0);
                       
                       return (
                         <TableCell key={hole.id} align="center" sx={{ position: 'relative' }}>
-                          <Box sx={{ color: getScoreColor(grossScore, hole.par) }}>
+                          <Box sx={{ color: get_score_color(gross_score, hole.par) }}>
                             <EditScoreCell
-                              currentScore={grossScore}
-                              onSave={(score) => onScoreChange(player.id, hole.number, score)}
+                              current_score={gross_score}
+                              on_save={(score) => on_score_change(player.id, hole.number, score)}
                             />
                           </Box>
                           <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                            {netScore !== null ? netScore : '-'}
+                            {net_score !== null ? net_score : '-'}
                           </Box>
-                          {handicapStrokes[hole.number] > 0 && (
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                position: 'absolute',
-                                top: 2,
-                                right: 2,
-                                fontSize: '0.6rem',
-                              }}
-                            >
-                              {'*'.repeat(handicapStrokes[hole.number])}
-                            </Typography>
+                          {handicap_strokes[hole.number] > 0 && (
+                            <Tooltip title="Handicap strokes are shown with asterisks (*)">
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  position: 'absolute',
+                                  top: 2,
+                                  right: 2,
+                                  fontSize: '0.6rem',
+                                }}
+                              >
+                                {'*'.repeat(handicap_strokes[hole.number])}
+                              </Typography>
+                            </Tooltip>
                           )}
                         </TableCell>
                       );
                     })}
                     <TableCell align="center">
-                      {backGrossTotal}
+                      {calculate_back_nine(player.id)}
                       <br />
                       <Typography variant="caption">
-                        {backNetTotal}
+                        {back_net_total}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">
-                      {totalGross}
+                      {calculate_total(player.id)}
                       <br />
                       <Typography variant="caption">
-                        {totalNet}
+                        {total_net}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -299,14 +430,24 @@ export const Scorecard = ({ players, scores, onScoreChange, playerTees, onEndRou
         </TableContainer>
       )}
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-        {onEndRound && (
-          <Button variant="contained" color="primary" onClick={onEndRound}>
-            End Round
+      <Box sx={{ mt: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        {on_end_round && (
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={on_end_round}
+            disabled={loading}
+          >
+            {loading ? <CircularProgress size={24} /> : 'End Round'}
           </Button>
         )}
-        {onDiscardRound && (
-          <Button variant="outlined" color="error" onClick={onDiscardRound}>
+        {on_discard_round && (
+          <Button 
+            variant="outlined" 
+            color="error" 
+            onClick={on_discard_round}
+            disabled={loading}
+          >
             Discard Round
           </Button>
         )}
