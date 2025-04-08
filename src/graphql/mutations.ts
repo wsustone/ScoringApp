@@ -4,18 +4,9 @@ export const START_ROUND = gql`
   mutation StartRound($input: StartRoundInput!) {
     start_round(input: $input) {
       id
-      course_id
       course_name
       status
       start_time
-      players {
-        id
-        round_id
-        player_id
-        name
-        handicap
-        tee_id
-      }
     }
   }
 `;
@@ -159,9 +150,6 @@ export const END_ROUND = gql`
 
 export const DISCARD_ROUND = gql`
   mutation DiscardRound($id: ID!) {
-    discard_round(id: $id) {
-      id
-      status
-    }
+    discard_round(id: $id)
   }
 `;

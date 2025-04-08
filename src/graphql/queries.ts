@@ -111,7 +111,6 @@ export const GET_ACTIVE_ROUNDS = gql`
   query GetActiveRounds {
     get_active_rounds {
       id
-      course_id
       course_name
       status
       start_time
@@ -119,20 +118,9 @@ export const GET_ACTIVE_ROUNDS = gql`
       players {
         id
         round_id
-        player_id
         name
         handicap
         tee_id
-      }
-      scores {
-        id
-        round_id
-        hole_id
-        player_id
-        gross_score
-        net_score
-        has_stroke
-        timestamp
       }
     }
   }
@@ -295,23 +283,47 @@ export const GET_SCORECARD = gql`
   }
 `;
 
-export const GET_ROUND = gql`
-  query GetRound($id: ID!) {
+export const GET_ROUND_INFO = gql`
+  query GetRoundInfo($id: ID!) {
     get_round(id: $id) {
       id
-      course_id
       course_name
       status
       start_time
       end_time
+    }
+  }
+`;
+
+export const GET_ROUND_PLAYERS_INFO = gql`
+  query GetRoundPlayers($id: ID!) {
+    get_round(id: $id) {
       players {
         id
         round_id
-        player_id
         name
         handicap
         tee_id
       }
+    }
+  }
+`;
+
+export const GET_PLAYER_HOLES = gql`
+  query GetPlayerHoles($tee_id: ID!) {
+    get_player_holes(tee_id: $tee_id) {
+      id
+      number
+      par
+      stroke_index
+      distance
+    }
+  }
+`;
+
+export const GET_ROUND_SCORES_INFO = gql`
+  query GetRoundScores($id: ID!) {
+    get_round(id: $id) {
       scores {
         id
         round_id
@@ -322,14 +334,20 @@ export const GET_ROUND = gql`
         has_stroke
         timestamp
       }
+    }
+  }
+`;
+
+export const GET_ROUND_GAMES_INFO = gql`
+  query GetRoundGames($id: ID!) {
+    get_round(id: $id) {
       games {
         id
-        round_id
-        course_id
         type
         enabled
         settings {
-          banker {
+          __typename
+          ... on BankerSettings {
             min_dots
             max_dots
             dot_value
@@ -337,39 +355,17 @@ export const GET_ROUND = gql`
             use_gross_birdies
             par3_triples
           }
-          nassau {
+          ... on NassauSettings {
             front_nine_bet
             back_nine_bet
             match_bet
             auto_press
             press_after
           }
-          skins {
+          ... on SkinsSettings {
             bet_amount
             carry_over
           }
-        }
-      }
-      course {
-        holes {
-          id
-          number
-          par
-          stroke_index
-          distance
-        }
-      }
-      player_tees {
-        id
-        name
-        course_rating
-        slope_rating
-        holes {
-          id
-          number
-          par
-          stroke_index
-          distance
         }
       }
     }

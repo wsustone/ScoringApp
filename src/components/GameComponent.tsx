@@ -5,9 +5,10 @@ import { Game, GameType } from '../types/game';
 interface GameComponentProps {
   onGameChange: (games: Game[]) => void;
   selectedGames: Game[];
+  courseId: string;
 }
 
-export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, selectedGames }) => {
+export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, selectedGames, courseId }) => {
   const handleGameSelect = (type: GameType) => {
     // Check if game type already exists
     if (selectedGames.some(game => game.type === type)) {
@@ -17,7 +18,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
     let newGame: Game;
     const id = Math.random().toString(36).substring(7);
     const roundId = '';  // This will be set when the round is created
-    const courseId = ''; // This will be set when the round is created
+    // Removed hardcoded empty courseId
     
     switch (type) {
       case 'banker':

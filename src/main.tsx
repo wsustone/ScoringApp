@@ -5,7 +5,6 @@ import { apolloClient } from './graphql/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import App from './App';
 import { GamePage } from './pages/GamePage';
-import { CourseDetail } from './components/CourseDetail';
 import { Dashboard } from './pages/Dashboard';
 import { AddPlayer } from './pages/AddPlayer';
 import { EditPlayer } from './pages/EditPlayer';
@@ -29,12 +28,8 @@ const router = createBrowserRouter([
         element: <EditPlayer />,
       },
       {
-        path: 'course/:id',
-        element: <CourseDetail courseName="" tee_settings={[]} onStartRound={() => {}} />,
-      },
-      {
         path: 'round/:id',
-        element: <GamePage tee_settings={[]} />,
+        element: <GamePage tee_settings={[]} courseId="" />,
       },
     ],
   },

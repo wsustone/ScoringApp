@@ -20,8 +20,7 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { PlayerRound } from '../types/player';
-import { Game } from '../types/game';
-import { Hole, ExtendedGolfTee } from '../types/game';
+import { Hole } from '../types/game';
 
 interface Score {
   id: string;
@@ -35,9 +34,7 @@ interface Score {
 interface ScorecardProps {
   players: PlayerRound[];
   scores: Score[];
-  games: Game[];
   on_score_change: (player_id: string, hole_number: number, score: number | null) => void;
-  player_tees: { [key: string]: ExtendedGolfTee };
   on_end_round?: () => void;
   on_discard_round?: () => void;
   loading?: boolean;
@@ -154,9 +151,7 @@ const ScoreLegend = () => {
 export const Scorecard = ({ 
   players, 
   scores, 
-  games, 
   on_score_change, 
-  player_tees, 
   on_end_round, 
   on_discard_round,
   loading = false,
@@ -274,8 +269,6 @@ export const Scorecard = ({
                     <br />
                     <Typography variant="caption">
                       HCP: {player.handicap}
-                      <br />
-                      {player_tees[player.id]?.name}
                     </Typography>
                   </TableCell>
                   {front_holes.map(hole => {
@@ -371,8 +364,6 @@ export const Scorecard = ({
                       <br />
                       <Typography variant="caption">
                         HCP: {player.handicap}
-                        <br />
-                        {player_tees[player.id]?.name}
                       </Typography>
                     </TableCell>
                     {back_holes.map(hole => {

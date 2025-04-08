@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Typography, TextField, Card, CardContent, Grid, IconButton, Button, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import { PlayerRound } from '../types/player';
-import { Hole, Game, TeeSetting } from '../types/game';
+import { Hole, Game } from '../types/game';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 
@@ -21,7 +21,6 @@ interface HoleByHoleProps {
   holes: Hole[];
   scores: Score[];
   onScoreUpdate: (playerId: string, holeId: string, score: number) => void;
-  playerTees: { [key: string]: TeeSetting };
   games: Game[];
   onBankerUpdate?: (holeNumber: number, data: Partial<BankerHoleData>) => void;
 }
@@ -34,7 +33,7 @@ interface BankerHoleData {
   doubles: string[];
 }
 
-export const HoleByHole = ({ players, holes, scores, onScoreUpdate, playerTees, games, onBankerUpdate }: HoleByHoleProps) => {
+export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBankerUpdate }: HoleByHoleProps) => {
   const [currentHoleIndex, setCurrentHoleIndex] = useState(0);
   const [selectedBanker, setSelectedBanker] = useState<string | null>(null);
   const [bankerDots, setBankerDots] = useState<number>(1);
@@ -121,7 +120,7 @@ export const HoleByHole = ({ players, holes, scores, onScoreUpdate, playerTees, 
                   {player.name}
                 </Typography>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Tee: {playerTees[player.tee_id]?.name || 'Not set'}
+                  Tee: {player.tee_id}
                 </Typography>
                 <TextField
                   label="Score"

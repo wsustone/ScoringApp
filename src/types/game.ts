@@ -95,6 +95,26 @@ export interface Round {
   scores: Score[];
 }
 
+export interface PlayerInput {
+  id: string;
+  name: string;
+  tee_id: string;
+  handicap: number;
+}
+
+export interface GameInput {
+  type: 'banker' | 'nassau' | 'skins';
+  enabled: boolean;
+  course_id: string;
+  settings: GameSettings;
+}
+
+export interface StartRoundInput {
+  course_name: string;
+  players: PlayerInput[];
+  games: GameInput[];
+}
+
 export const createGame = (type: GameType, roundId: string, courseId: string): Game => {
   const baseGame = {
     id: Math.random().toString(36).substring(7),
