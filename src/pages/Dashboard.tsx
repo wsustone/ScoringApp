@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Button, Grid, Card, CardContent, List, ListItem, ListItemText, Tabs, Tab, CircularProgress } from '@mui/material';
 import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { v4 as uuidv4 } from 'uuid';
-import { GET_GOLF_COURSES, GET_ACTIVE_ROUNDS, GET_ROUND_INFO, GET_ROUND_PLAYERS, GET_ROUND_SCORES, GET_ROUND_GAMES, GET_PLAYER_HOLES } from '../graphql/queries';
+import { GET_GOLF_COURSES, GET_ACTIVE_ROUNDS, GET_ROUND_SUMMARY, GET_ROUND_PLAYERS, GET_ROUND_SCORES, GET_ROUND_GAMES, GET_PLAYER_HOLES } from '../graphql/queries';
 import { START_ROUND, END_ROUND, DISCARD_ROUND, UPDATE_SCORE } from '../graphql/mutations';
 import { PlayerForm } from '../components/PlayerForm';
 import { GameComponent } from '../components/GameComponent';
@@ -35,7 +35,7 @@ export const Dashboard = () => {
   const { data: coursesData, loading: coursesLoading } = useQuery<{ golf_courses: GolfCourse[] }>(GET_GOLF_COURSES);
   const { data: activeRoundsData, loading: activeRoundsLoading } = useQuery<GetActiveRoundsResponse>(GET_ACTIVE_ROUNDS);
   
-  const { data: roundInfo, loading: roundInfoLoading } = useQuery(GET_ROUND_INFO, {
+  const { data: roundInfo, loading: roundInfoLoading } = useQuery(GET_ROUND_SUMMARY, {
     variables: { id: selectedRound },
     skip: !selectedRound,
   });
@@ -111,7 +111,7 @@ export const Dashboard = () => {
       if (result.data?.start_round) {
         // Refetch the round data to get all details
         await client.query({
-          query: GET_ROUND_INFO,
+          query: GET_ROUND_SUMMARY,
           variables: { id: result.data.start_round.id },
           fetchPolicy: 'network-only'
         });

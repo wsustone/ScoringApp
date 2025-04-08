@@ -130,7 +130,6 @@ export const GET_ROUND_SUMMARY = gql`
   query GetRoundSummary($id: ID!) {
     get_round(id: $id) {
       id
-      course_id
       course_name
       status
       start_time
@@ -142,13 +141,9 @@ export const GET_ROUND_SUMMARY = gql`
 export const GET_ROUND_PLAYERS = gql`
   query GetRoundPlayers($id: ID!) {
     get_round(id: $id) {
-      id
       players {
         id
-        round_id
-        player_id
         name
-        handicap
         tee_id
         holes {
           id
@@ -165,87 +160,81 @@ export const GET_ROUND_PLAYERS = gql`
 export const GET_ROUND_SCORES = gql`
   query GetRoundScores($id: ID!) {
     get_round(id: $id) {
-      id
       scores {
         id
-        round_id
         hole_id
         player_id
         gross_score
         net_score
         has_stroke
         timestamp
-        score
       }
     }
   }
 `;
 
-const BANKER_GAME_FRAGMENT = gql`
-  fragment BankerGameFields on Game {
-    id
-    type
-    enabled
-    settings {
-      banker {
-        min_dots
-        max_dots
-        dot_value
-        double_birdie_bets
-        use_gross_birdies
-        par3_triples
+export const GET_ROUND = gql`
+  query GetRound($id: ID!) {
+    get_round(id: $id) {
+      id
+      course_name
+      status
+      start_time
+      end_time
+      players {
+        id
+        name
+        tee_id
+        holes {
+          id
+          number
+          par
+          stroke_index
+          distance
+        }
       }
-    }
-  }
-`;
-
-const NASSAU_GAME_FRAGMENT = gql`
-  fragment NassauGameFields on Game {
-    id
-    type
-    enabled
-    settings {
-      nassau {
-        front_nine_bet
-        back_nine_bet
-        match_bet
-        auto_press
-        press_after
-      }
-    }
-  }
-`;
-
-const SKINS_GAME_FRAGMENT = gql`
-  fragment SkinsGameFields on Game {
-    id
-    type
-    enabled
-    settings {
-      skins {
-        carry_over
-        bet_amount
+      scores {
+        id
+        hole_id
+        player_id
+        gross_score
+        net_score
+        has_stroke
+        timestamp
       }
     }
   }
 `;
 
 export const GET_ROUND_GAMES = gql`
-  ${BANKER_GAME_FRAGMENT}
-  ${NASSAU_GAME_FRAGMENT}
-  ${SKINS_GAME_FRAGMENT}
   query GetRoundGames($id: ID!) {
     get_round(id: $id) {
-      id
       games {
         id
-        round_id
         type
-        course_id
         enabled
-        ...BankerGameFields
-        ...NassauGameFields
-        ...SkinsGameFields
+        settings {
+          __typename
+          ... on BankerSettings {
+            min_dots
+            max_dots
+            dot_value
+            double_birdie_bets
+            use_gross_birdies
+            par3_triples
+          }
+          ... on NassauSettings {
+            front_nine_bet
+            back_nine_bet
+            match_bet
+            auto_press
+            press_after
+          }
+          ... on SkinsSettings {
+            bet_amount
+            carry_over
+          }
+        }
       }
     }
   }
@@ -308,7 +297,6 @@ export const GET_ROUND_PLAYERS_INFO = gql`
     }
   }
 `;
-
 export const GET_PLAYER_HOLES = gql`
   query GetPlayerHoles($tee_id: ID!) {
     get_player_holes(tee_id: $tee_id) {
