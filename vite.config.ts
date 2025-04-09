@@ -15,12 +15,12 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 5173,
       proxy: {
-        '/query': {
+        '/graphql': {
           target: apiUrl,
           changeOrigin: true,
           secure: false,
-          ws: true,
-        },
+          rewrite: (path) => path.replace(/^\/graphql/, '')
+        }
       },
     },
     preview: {

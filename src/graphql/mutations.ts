@@ -4,7 +4,7 @@ export const START_ROUND = gql`
   mutation StartRound($input: StartRoundInput!) {
     start_round(input: $input) {
       id
-      course_name
+      course_id
       status
       start_time
     }

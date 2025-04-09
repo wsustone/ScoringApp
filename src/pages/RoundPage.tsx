@@ -62,7 +62,7 @@ export const RoundPage = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        {round.course_name}
+        {round.course_id}
       </Typography>
       
       <Box sx={{ mb: 4 }}>

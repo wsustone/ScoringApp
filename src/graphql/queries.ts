@@ -70,7 +70,7 @@ export const GET_ACTIVE_ROUNDS = gql`
   query GetActiveRounds {
     get_active_rounds {
       id
-      course_name
+      course_id
       status
       start_time
       end_time
@@ -89,7 +89,7 @@ export const GET_ROUND_SUMMARY = gql`
   query GetRoundSummary($id: ID!) {
     get_round(id: $id) {
       id
-      course_name
+      course_id
       status
       start_time
       end_time
@@ -136,7 +136,7 @@ export const GET_ROUND = gql`
   query GetRound($id: ID!) {
     get_round(id: $id) {
       id
-      course_name
+      course_id
       status
       start_time
       end_time
@@ -203,7 +203,7 @@ export const GET_SCORECARD = gql`
   query GetScorecard($round_id: ID!) {
     scorecard(round_id: $round_id) {
       id
-      course_name
+      course_id
       players {
         id
         name
@@ -235,7 +235,7 @@ export const GET_ROUND_INFO = gql`
   query GetRoundInfo($id: ID!) {
     get_round(id: $id) {
       id
-      course_name
+      course_id
       status
       start_time
       end_time

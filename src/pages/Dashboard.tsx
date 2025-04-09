@@ -10,12 +10,12 @@ import { HoleByHole } from '../components/HoleByHole';
 import { Scorecard } from '../components/Scorecard';
 import { GolfCourse, Hole, Score } from '../types/game';
 import { PlayerRound, PlayerRoundBasic } from '../types/player';
-import { Game } from '../types/game';
+import { Game, GameSettings } from '../types/game';
 
 interface GetActiveRoundsResponse {
   get_active_rounds: {
     id: string;
-    course_name: string;
+    course_id: string;
     status: string;
     start_time: string;
     end_time: string | null;
@@ -94,7 +94,7 @@ export const Dashboard = () => {
         variables: {
           input: {
             id: roundData?.get_round?.id || uuidv4(),
-            course_name: selectedCourse.name,
+            course_id: selectedCourse.id,
             players: players.map(p => ({
               id: p.id || uuidv4(),
               name: p.name,
@@ -116,11 +116,36 @@ export const Dashboard = () => {
         variables: {
           input: {
             round_id: roundId,
-            games: selectedGames.map(g => ({
-              type: g.type,
-              enabled: true,
-              settings: g.settings
-            }))
+            games: selectedGames.map(g => {
+              const settings: GameSettings = {
+                banker: null,
+                nassau: null,
+                skins: null,
+                matchplay: null
+              };
+
+              switch (g.type) {
+                case 'banker':
+                  settings.banker = g.settings.banker;
+                  break;
+                case 'nassau':
+                  settings.nassau = g.settings.nassau;
+                  break;
+                case 'skins':
+                  settings.skins = g.settings.skins;
+                  break;
+                case 'matchplay':
+                  settings.matchplay = g.settings.matchplay;
+                  break;
+              }
+
+              return {
+                type: g.type,
+                enabled: true,
+                course_id: selectedCourse.id,
+                settings
+              };
+            })
           }
         }
       });
@@ -264,7 +289,7 @@ export const Dashboard = () => {
                 <Card>
                   <CardContent>
                     <Typography variant="h6" gutterBottom>
-                      {round.course_name}
+                      {round.course_id}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" gutterBottom>
                       Started: {new Date(round.start_time).toLocaleString()}
@@ -307,7 +332,7 @@ export const Dashboard = () => {
       {activeTab === 2 && roundData?.get_round && (
         <Box>
           <Typography variant="h5" gutterBottom>
-            {roundData.get_round.course_name}
+            {roundData.get_round.course_id}
           </Typography>
           
           <Box sx={{ mb: 4 }}>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography, TextField, Switch, FormControlLabel, Grid, Card, CardContent, Button } from '@mui/material';
-import { Game, GameType, BankerSettings, NassauSettings, SkinsSettings } from '../types/game';
+import { Game, GameType } from '../types/game';
 
 interface GameComponentProps {
   onGameChange: (games: Game[]) => void;
@@ -29,12 +29,14 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           course_id: courseId,
           enabled: true,
           settings: {
-            min_dots: 1,
-            max_dots: 3,
-            dot_value: 1,
-            double_birdie_bets: false,
-            use_gross_birdies: false,
-            par3_triples: false
+            banker: {
+              min_dots: 1,
+              max_dots: 3,
+              dot_value: 1,
+              double_birdie_bets: false,
+              use_gross_birdies: false,
+              par3_triples: false
+            }
           }
         };
         break;
@@ -46,11 +48,13 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           course_id: courseId,
           enabled: true,
           settings: {
-            front_nine_bet: 2,
-            back_nine_bet: 2,
-            match_bet: 2,
-            auto_press: false,
-            press_after: 2
+            nassau: {
+              front_nine_bet: 2,
+              back_nine_bet: 2,
+              match_bet: 2,
+              auto_press: false,
+              press_after: 2
+            }
           }
         };
         break;
@@ -62,8 +66,26 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           course_id: courseId,
           enabled: true,
           settings: {
-            bet_amount: 1,
-            carry_over: true
+            skins: {
+              bet_amount: 1.0,
+              carry_over: true
+            }
+          }
+        };
+        break;
+      case 'matchplay':
+        newGame = {
+          id,
+          type: 'matchplay',
+          round_id: roundId,
+          course_id: courseId,
+          enabled: true,
+          settings: {
+            matchplay: {
+              match_bet: 1.0,
+              auto_press: false,
+              press_after: 3
+            }
           }
         };
         break;
@@ -106,7 +128,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
 
   const renderBankerSettings = (game: Game) => {
     if (game.type !== 'banker') return null;
-    const settings = game.settings as BankerSettings;
+    const settings = game.settings?.banker;
     if (!settings) return null;
 
     return (
@@ -115,7 +137,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           label="Min Dots"
           type="number"
           value={settings.min_dots}
-          onChange={(e) => handleSettingChange(game.id, ['settings', 'min_dots'], parseInt(e.target.value))}
+          onChange={(e) => handleSettingChange(game.id, ['settings', 'banker', 'min_dots'], parseInt(e.target.value))}
           fullWidth
           margin="normal"
         />
@@ -123,7 +145,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           label="Max Dots"
           type="number"
           value={settings.max_dots}
-          onChange={(e) => handleSettingChange(game.id, ['settings', 'max_dots'], parseInt(e.target.value))}
+          onChange={(e) => handleSettingChange(game.id, ['settings', 'banker', 'max_dots'], parseInt(e.target.value))}
           fullWidth
           margin="normal"
         />
@@ -131,7 +153,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           label="Dot Value"
           type="number"
           value={settings.dot_value}
-          onChange={(e) => handleSettingChange(game.id, ['settings', 'dot_value'], parseFloat(e.target.value))}
+          onChange={(e) => handleSettingChange(game.id, ['settings', 'banker', 'dot_value'], parseFloat(e.target.value))}
           fullWidth
           margin="normal"
         />
@@ -139,7 +161,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           control={
             <Switch
               checked={settings.double_birdie_bets}
-              onChange={(e) => handleSettingChange(game.id, ['settings', 'double_birdie_bets'], e.target.checked)}
+              onChange={(e) => handleSettingChange(game.id, ['settings', 'banker', 'double_birdie_bets'], e.target.checked)}
             />
           }
           label="Double Birdie Bets"
@@ -148,7 +170,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           control={
             <Switch
               checked={settings.use_gross_birdies}
-              onChange={(e) => handleSettingChange(game.id, ['settings', 'use_gross_birdies'], e.target.checked)}
+              onChange={(e) => handleSettingChange(game.id, ['settings', 'banker', 'use_gross_birdies'], e.target.checked)}
             />
           }
           label="Use Gross Birdies"
@@ -157,7 +179,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           control={
             <Switch
               checked={settings.par3_triples}
-              onChange={(e) => handleSettingChange(game.id, ['settings', 'par3_triples'], e.target.checked)}
+              onChange={(e) => handleSettingChange(game.id, ['settings', 'banker', 'par3_triples'], e.target.checked)}
             />
           }
           label="Par 3 Triples"
@@ -168,15 +190,15 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
 
   const renderNassauSettings = (game: Game) => {
     if (game.type !== 'nassau') return null;
-    const settings = game.settings as { nassau?: NassauSettings };
-    if (!settings?.nassau) return null;
+    const settings = game.settings?.nassau;
+    if (!settings) return null;
 
     return (
       <Box>
         <TextField
           label="Front Nine Bet"
           type="number"
-          value={settings.nassau.front_nine_bet}
+          value={settings.front_nine_bet}
           onChange={(e) => handleSettingChange(game.id, ['settings', 'nassau', 'front_nine_bet'], parseFloat(e.target.value))}
           fullWidth
           margin="normal"
@@ -184,7 +206,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
         <TextField
           label="Back Nine Bet"
           type="number"
-          value={settings.nassau.back_nine_bet}
+          value={settings.back_nine_bet}
           onChange={(e) => handleSettingChange(game.id, ['settings', 'nassau', 'back_nine_bet'], parseFloat(e.target.value))}
           fullWidth
           margin="normal"
@@ -192,7 +214,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
         <TextField
           label="Match Bet"
           type="number"
-          value={settings.nassau.match_bet}
+          value={settings.match_bet}
           onChange={(e) => handleSettingChange(game.id, ['settings', 'nassau', 'match_bet'], parseFloat(e.target.value))}
           fullWidth
           margin="normal"
@@ -200,37 +222,35 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
         <FormControlLabel
           control={
             <Switch
-              checked={settings.nassau.auto_press}
+              checked={settings.auto_press}
               onChange={(e) => handleSettingChange(game.id, ['settings', 'nassau', 'auto_press'], e.target.checked)}
             />
           }
           label="Auto Press"
         />
-        {settings.nassau.auto_press && (
-          <TextField
-            label="Press After"
-            type="number"
-            value={settings.nassau.press_after}
-            onChange={(e) => handleSettingChange(game.id, ['settings', 'nassau', 'press_after'], parseInt(e.target.value))}
-            fullWidth
-            margin="normal"
-          />
-        )}
+        <TextField
+          label="Press After"
+          type="number"
+          value={settings.press_after}
+          onChange={(e) => handleSettingChange(game.id, ['settings', 'nassau', 'press_after'], parseInt(e.target.value))}
+          fullWidth
+          margin="normal"
+        />
       </Box>
     );
   };
 
   const renderSkinsSettings = (game: Game) => {
     if (game.type !== 'skins') return null;
-    const settings = game.settings as { skins?: SkinsSettings };
-    if (!settings?.skins) return null;
+    const settings = game.settings?.skins;
+    if (!settings) return null;
 
     return (
       <Box>
         <TextField
           label="Bet Amount"
           type="number"
-          value={settings.skins.bet_amount}
+          value={settings.bet_amount}
           onChange={(e) => handleSettingChange(game.id, ['settings', 'skins', 'bet_amount'], parseFloat(e.target.value))}
           fullWidth
           margin="normal"
@@ -238,11 +258,47 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
         <FormControlLabel
           control={
             <Switch
-              checked={settings.skins.carry_over}
+              checked={settings.carry_over}
               onChange={(e) => handleSettingChange(game.id, ['settings', 'skins', 'carry_over'], e.target.checked)}
             />
           }
           label="Carry Over"
+        />
+      </Box>
+    );
+  };
+
+  const renderMatchplaySettings = (game: Game) => {
+    if (game.type !== 'matchplay') return null;
+    const settings = game.settings?.matchplay;
+    if (!settings) return null;
+
+    return (
+      <Box>
+        <TextField
+          label="Match Bet"
+          type="number"
+          value={settings.match_bet}
+          onChange={(e) => handleSettingChange(game.id, ['settings', 'matchplay', 'match_bet'], parseFloat(e.target.value))}
+          fullWidth
+          margin="normal"
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={settings.auto_press}
+              onChange={(e) => handleSettingChange(game.id, ['settings', 'matchplay', 'auto_press'], e.target.checked)}
+            />
+          }
+          label="Auto Press"
+        />
+        <TextField
+          label="Press After"
+          type="number"
+          value={settings.press_after}
+          onChange={(e) => handleSettingChange(game.id, ['settings', 'matchplay', 'press_after'], parseInt(e.target.value))}
+          fullWidth
+          margin="normal"
         />
       </Box>
     );
@@ -278,6 +334,14 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
           >
             Add Skins
           </Button>
+          <Button
+            variant="contained"
+            onClick={() => handleGameSelect('matchplay')}
+            disabled={selectedGames.some(g => g.type === 'matchplay')}
+            sx={{ ml: 1 }}
+          >
+            Add Matchplay
+          </Button>
         </Grid>
         {selectedGames.map(game => (
           <Grid item xs={12} key={game.id}>
@@ -300,6 +364,7 @@ export const GameComponent: React.FC<GameComponentProps> = ({ onGameChange, sele
                 {game.type === 'banker' && renderBankerSettings(game)}
                 {game.type === 'nassau' && renderNassauSettings(game)}
                 {game.type === 'skins' && renderSkinsSettings(game)}
+                {game.type === 'matchplay' && renderMatchplaySettings(game)}
               </CardContent>
             </Card>
           </Grid>

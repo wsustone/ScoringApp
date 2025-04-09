@@ -2,8 +2,8 @@ import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/clien
 import { onError } from '@apollo/client/link/error';
 import { typeDefs } from './typeDefs';
 
-// Use environment variable or fallback to host.docker.internal for containerized environment
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/graphql';
+// Match ScoringEngine's GraphQL endpoint
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/graphql';
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {

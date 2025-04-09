@@ -1,9 +1,9 @@
-import { Game, Score } from './game';
-import { PlayerRound } from './player';
+import { Game, PlayerRound } from './game';
+import { Score as ApiScore } from '@scoringengine/api-types';
 
 export interface Round {
   id: string;
-  course_name: string;
+  course_id: string;
   start_time: string;
   end_time?: string;
   status: string;
@@ -14,11 +14,19 @@ export interface Round {
 
 export interface RoundResponse {
   id: string;
-  course_name: string;
+  course_id: string;
   start_time: string;
   end_time?: string;
   status: string;
   players: PlayerRound[];
   scores: Score[];
   games: Game[];
+}
+
+interface Score {
+    hole_id: string;
+    player_id: string;
+    gross_score: number;
+    net_score: number;
+    strokes_received: number;
 }
