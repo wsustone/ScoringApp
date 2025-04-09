@@ -1,13 +1,25 @@
 import { useState } from 'react';
 import { Box, Button, Grid, TextField, MenuItem, IconButton } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
-import { PlayerRound } from '../types/player';
-import { GolfTee } from '../types/game';
+import { TeeSetting } from '../types/game';
+
+export interface Player {
+  id: string;
+  name: string;
+  handicap: number;
+  tee_id: string;
+}
+
+interface PlayerRound extends Player {
+  round_id: string;
+  player_id: string;
+  holes: any[];
+}
 
 interface PlayerFormProps {
   onPlayersChange: (players: PlayerRound[]) => void;
   players: PlayerRound[];
-  teeSettings: GolfTee[];
+  teeSettings: TeeSetting[];
 }
 
 export const PlayerForm = ({ onPlayersChange, players, teeSettings }: PlayerFormProps) => {
@@ -15,26 +27,24 @@ export const PlayerForm = ({ onPlayersChange, players, teeSettings }: PlayerForm
     name: '',
     handicap: 0,
     tee_id: '',
+    holes: []
   });
 
   const handleAddPlayer = () => {
     if (!newPlayer.name || !newPlayer.tee_id) return;
 
     const player: PlayerRound = {
-      id: Math.random().toString(36).substring(7),
-      round_id: '',
-      player_id: Math.random().toString(36).substring(7),
+      id: Date.now().toString(),
       name: newPlayer.name,
       handicap: newPlayer.handicap || 0,
       tee_id: newPlayer.tee_id,
+      round_id: players.length > 0 ? players[0].round_id : '',
+      player_id: Date.now().toString(),
+      holes: []
     };
 
     onPlayersChange([...players, player]);
-    setNewPlayer({
-      name: '',
-      handicap: 0,
-      tee_id: '',
-    });
+    setNewPlayer({ name: '', handicap: 0, tee_id: '', holes: [] });
   };
 
   const handleRemovePlayer = (index: number) => {

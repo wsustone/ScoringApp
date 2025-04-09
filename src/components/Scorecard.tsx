@@ -20,76 +20,62 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { PlayerRound } from '../types/player';
-import { Hole } from '../types/game';
-
-interface Score {
-  id: string;
-  round_id: string;
-  hole_id: string;
-  player_id: string;
-  score: number | null;
-  timestamp: string;
-}
+import { Hole, Score } from '../types/game';
 
 interface ScorecardProps {
   players: PlayerRound[];
   scores: Score[];
-  on_score_change: (player_id: string, hole_number: number, score: number | null) => void;
-  on_end_round?: () => void;
-  on_discard_round?: () => void;
+  on_score_change: (player_id: string, hole_id: string, score: number | undefined) => void;
+  on_end_round?: (roundId: string | undefined) => void;
+  on_discard_round?: (roundId: string | undefined) => void;
   loading?: boolean;
   error?: string;
+  roundId?: string;
 }
 
-interface EditScoreCellProps {
-  current_score: number | null;
-  on_save: (score: number | null) => void;
-}
+const EditScoreCell = ({ current_score, on_save }: { current_score: number | undefined, on_save: (score: number | undefined) => void }) => {
+  const [editMode, setEditMode] = React.useState(false);
+  const [score, setScore] = React.useState<string>(current_score?.toString() ?? '');
 
-const EditScoreCell = ({ current_score, on_save }: EditScoreCellProps) => {
-  const [is_editing, set_is_editing] = React.useState(false);
-  const [score, set_score] = React.useState<string>(current_score?.toString() || '');
-
-  const handle_save = () => {
-    const new_score = score === '' ? null : parseInt(score, 10);
-    if (new_score === null || (!isNaN(new_score) && new_score >= 1)) {
-      on_save(new_score);
-      set_is_editing(false);
+  const handleSave = () => {
+    const parsedScore = score ? parseInt(score, 10) : undefined;
+    if (parsedScore === undefined) {
+      on_save(undefined);
+    } else if (!isNaN(parsedScore)) {
+      on_save(parsedScore);
     }
+    setEditMode(false);
   };
 
-  const handle_key_press = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handle_save();
-    } else if (e.key === 'Escape') {
-      set_is_editing(false);
-      set_score(current_score?.toString() || '');
-    }
+  const handleCancel = () => {
+    setScore(current_score?.toString() ?? '');
+    setEditMode(false);
   };
 
-  return is_editing ? (
-    <TextField
-      autoFocus
-      size="small"
-      value={score}
-      onChange={(e) => set_score(e.target.value)}
-      onBlur={handle_save}
-      onKeyDown={handle_key_press}
-      inputProps={{
-        style: { padding: '2px', textAlign: 'center', width: '30px' },
-        min: 1,
-        type: 'number'
-      }}
-    />
-  ) : (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span>{current_score || '-'}</span>
-      <IconButton
-        size="small"
-        onClick={() => set_is_editing(true)}
-        sx={{ ml: 0.5, opacity: 0.3, '&:hover': { opacity: 1 } }}
-      >
-        <EditIcon fontSize="inherit" />
+  if (editMode) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <TextField
+          size="small"
+          value={score}
+          onChange={(e) => setScore(e.target.value)}
+          sx={{ mx: 1 }}
+        />
+        <Button variant="outlined" size="small" onClick={handleSave}>
+          Save
+        </Button>
+        <Button variant="outlined" size="small" onClick={handleCancel}>
+          Cancel
+        </Button>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+      <Typography>{current_score ?? '-'}</Typography>
+      <IconButton size="small" onClick={() => setEditMode(true)}>
+        <EditIcon />
       </IconButton>
     </Box>
   );
@@ -111,16 +97,17 @@ const calculate_handicap_strokes = (handicap: number, holes: Hole[]): { [key: nu
   return strokes;
 };
 
-const calculate_net_score = (gross_score: number | null, handicap_strokes: number): number | null => {
-  if (gross_score === null) return null;
+const calculate_net_score = (gross_score: number | undefined, handicap_strokes: number): number | undefined => {
+  if (gross_score === undefined) return undefined;
   return gross_score - handicap_strokes;
 };
 
-const get_score_color = (score: number | null, par: number): string => {
-  if (score === null) return 'inherit';
-  if (score < par) return '#dc3545'; // red for under par
+const get_score_color = (score: number | undefined, par: number): string => {
+  if (score === undefined) return 'inherit';
   if (score === par) return '#0d6efd'; // blue for par
-  return 'inherit'; // black for over par
+  if (score < par) return '#dc3545'; // red for under par
+  if (score > par) return '#000000';
+  return 'error.main';
 };
 
 const calculate_totals = (player_id: string, holes: Hole[], scores: Score[], handicap_strokes: { [key: number]: number }): { net_total: number } => {
@@ -155,7 +142,8 @@ export const Scorecard = ({
   on_end_round, 
   on_discard_round,
   loading = false,
-  error
+  error,
+  roundId
 }: ScorecardProps) => {
   const theme = useTheme();
   const is_mobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -188,9 +176,9 @@ export const Scorecard = ({
     );
   }
 
-  const get_player_score = (player_id: string, hole_number: number): number | null => {
+  const get_player_score = (player_id: string, hole_number: number): number | undefined => {
     const score = scores.find(s => s.player_id === player_id && s.hole_id === `hole${hole_number}`);
-    return score ? score.score : null;
+    return score ? score.score : undefined;
   };
 
   const hole_numbers = {
@@ -202,7 +190,7 @@ export const Scorecard = ({
     let total = 0;
     for (const hole_number of hole_numbers.front) {
       const score = get_player_score(player_id, hole_number);
-      if (score !== null) {
+      if (score !== undefined) {
         total += score;
       }
     }
@@ -213,7 +201,7 @@ export const Scorecard = ({
     let total = 0;
     for (const hole_number of hole_numbers.back) {
       const score = get_player_score(player_id, hole_number);
-      if (score !== null) {
+      if (score !== undefined) {
         total += score;
       }
     }
@@ -280,11 +268,11 @@ export const Scorecard = ({
                         <Box sx={{ color: get_score_color(gross_score, hole.par) }}>
                           <EditScoreCell
                             current_score={gross_score}
-                            on_save={(score) => on_score_change(player.id, hole.number, score)}
+                            on_save={(score) => on_score_change(player.id, hole.id, score)}
                           />
                         </Box>
                         <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                          {net_score !== null ? net_score : '-'}
+                          {net_score !== undefined ? net_score : '-'}
                         </Box>
                         {handicap_strokes[hole.number] > 0 && (
                           <Tooltip title="Handicap strokes are shown with asterisks (*)">
@@ -375,11 +363,11 @@ export const Scorecard = ({
                           <Box sx={{ color: get_score_color(gross_score, hole.par) }}>
                             <EditScoreCell
                               current_score={gross_score}
-                              on_save={(score) => on_score_change(player.id, hole.number, score)}
+                              on_save={(score) => on_score_change(player.id, hole.id, score)}
                             />
                           </Box>
                           <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
-                            {net_score !== null ? net_score : '-'}
+                            {net_score !== undefined ? net_score : '-'}
                           </Box>
                           {handicap_strokes[hole.number] > 0 && (
                             <Tooltip title="Handicap strokes are shown with asterisks (*)">
@@ -426,8 +414,8 @@ export const Scorecard = ({
           <Button 
             variant="contained" 
             color="primary" 
-            onClick={on_end_round}
-            disabled={loading}
+            onClick={() => on_end_round?.(roundId)}
+            disabled={loading || !roundId}
           >
             {loading ? <CircularProgress size={24} /> : 'End Round'}
           </Button>
@@ -436,8 +424,8 @@ export const Scorecard = ({
           <Button 
             variant="outlined" 
             color="error" 
-            onClick={on_discard_round}
-            disabled={loading}
+            onClick={() => on_discard_round?.(roundId)}
+            disabled={loading || !roundId}
           >
             Discard Round
           </Button>

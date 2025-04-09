@@ -3,7 +3,7 @@ import { onError } from '@apollo/client/link/error';
 import { typeDefs } from './typeDefs';
 
 // Use environment variable or fallback to host.docker.internal for containerized environment
-const API_URL = import.meta.env.VITE_API_URL || 'http://host.docker.internal:8080/graphql';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/graphql';
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
@@ -33,7 +33,25 @@ console.log('Initializing Apollo Client with URL:', API_URL);
 
 const apolloClient = new ApolloClient({
   link: from([errorLink, httpLink]),
-  cache: new InMemoryCache(),
+  cache: new InMemoryCache({
+    typePolicies: {
+      Round: {
+        keyFields: ['id'],
+        fields: {
+          players: {
+            merge(existing = [], incoming = []) {
+              return [...new Set([...existing, ...incoming])];
+            },
+          },
+          games: {
+            merge(existing = [], incoming = []) {
+              return [...new Set([...existing, ...incoming])];
+            },
+          },
+        },
+      },
+    },
+  }),
   typeDefs,
   defaultOptions: {
     watchQuery: {

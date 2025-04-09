@@ -15,8 +15,6 @@ export const ADD_GAMES_TO_ROUND = gql`
   mutation AddGamesToRound($input: AddGamesToRoundInput!) {
     add_games_to_round(input: $input) {
       id
-      round_id
-      course_id
       type
       enabled
       settings {
@@ -135,6 +133,14 @@ export const UPDATE_GAME_SETTINGS = gql`
           carry_over
         }
       }
+    }
+  }
+`;
+
+export const UPDATE_ROUND = gql`
+  mutation UpdateRound($roundId: ID!, $scores: [ScoreInput!]!) {
+    update_round(id: $roundId, scores: $scores) {
+      id
     }
   }
 `;

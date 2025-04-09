@@ -4,6 +4,8 @@ export interface BaseGame {
   id: string;
   type: GameType;
   enabled: boolean;
+  round_id: string;
+  course_id: string;
 }
 
 export interface BankerSettings {
@@ -28,17 +30,24 @@ export interface SkinsSettings {
   carry_over: boolean;
 }
 
-export interface GameSettings {
-  banker?: BankerSettings;
-  nassau?: NassauSettings;
-  skins?: SkinsSettings;
+export type GameSettings = BankerSettings | NassauSettings | SkinsSettings;
+
+export interface BankerGame extends BaseGame {
+  type: 'banker';
+  settings: BankerSettings;
 }
 
-export interface Game extends BaseGame {
-  round_id: string;
-  course_id: string;
-  settings?: GameSettings;
+export interface NassauGame extends BaseGame {
+  type: 'nassau';
+  settings: NassauSettings;
 }
+
+export interface SkinsGame extends BaseGame {
+  type: 'skins';
+  settings: SkinsSettings;
+}
+
+export type Game = BankerGame | NassauGame | SkinsGame;
 
 export interface Hole {
   id: string;
@@ -78,11 +87,13 @@ export interface Score {
   round_id: string;
   hole_id: string;
   player_id: string;
-  gross_score: number;
-  net_score: number;
+  score: number | undefined;
+  gross_score: number | undefined;
+  net_score: number | undefined;
   has_stroke: boolean;
   timestamp: string;
-  score: number | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Round {
@@ -115,6 +126,11 @@ export interface StartRoundInput {
   games: GameInput[];
 }
 
+export interface HoleData {
+  winner: string | null;
+  points: number;
+}
+
 export const createGame = (type: GameType, roundId: string, courseId: string): Game => {
   const baseGame = {
     id: Math.random().toString(36).substring(7),
@@ -129,40 +145,34 @@ export const createGame = (type: GameType, roundId: string, courseId: string): G
         ...baseGame,
         type: 'banker',
         settings: {
-          banker: {
-            min_dots: 1,
-            max_dots: 3,
-            dot_value: 1,
-            double_birdie_bets: true,
-            use_gross_birdies: false,
-            par3_triples: true,
-          },
+          min_dots: 1,
+          max_dots: 3,
+          dot_value: 1,
+          double_birdie_bets: true,
+          use_gross_birdies: false,
+          par3_triples: true,
         },
-      } as Game;
+      } as BankerGame;
     case 'nassau':
       return {
         ...baseGame,
         type: 'nassau',
         settings: {
-          nassau: {
-            front_nine_bet: 5,
-            back_nine_bet: 5,
-            match_bet: 5,
-            auto_press: false,
-            press_after: 2,
-          },
+          front_nine_bet: 5,
+          back_nine_bet: 5,
+          match_bet: 5,
+          auto_press: false,
+          press_after: 2,
         },
-      } as Game;
+      } as NassauGame;
     case 'skins':
       return {
         ...baseGame,
         type: 'skins',
         settings: {
-          skins: {
-            bet_amount: 1,
-            carry_over: true,
-          },
+          bet_amount: 1,
+          carry_over: true,
         },
-      } as Game;
+      } as SkinsGame;
   }
 };

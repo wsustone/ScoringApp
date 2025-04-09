@@ -1,18 +1,12 @@
 import React from 'react';
-import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper } from '@mui/material';
-import { Game, BankerGame, NassauGame } from '../types/game';
+import { Box, Typography } from '@mui/material';
+import { Game, BankerGame, NassauGame, SkinsGame } from '../types/game';
 import { Player } from './PlayerForm';
 
 interface GameResultsProps {
   players: Player[];
   games: Game[];
   holes: number[];
-}
-
-interface HoleResult {
-  holeNumber: number;
-  winner: string | null;
-  points: number;
 }
 
 const isBankerGame = (game: Game): game is BankerGame => {
@@ -23,113 +17,60 @@ const isNassauGame = (game: Game): game is NassauGame => {
   return game.type === 'nassau';
 };
 
-export const GameResults: React.FC<GameResultsProps> = ({ players, games, holes }) => {
-  const renderBankerResults = (game: Game) => {
-    if (!isBankerGame(game)) return null;
+const isSkinsGame = (game: Game): game is SkinsGame => {
+  return game.type === 'skins';
+};
 
-    const holeResults: HoleResult[] = holes.map(holeNumber => ({
-      holeNumber,
-      winner: game.bankerData[holeNumber]?.winner || null,
-      points: game.bankerData[holeNumber]?.points || 0,
-    }));
-
+export const GameResults: React.FC<GameResultsProps> = ({ games }) => {
+  const renderBankerResults = (game: BankerGame) => {
+    const settings = game.settings;
     return (
       <Box key={game.type} sx={{ mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Banker Results
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Hole</TableCell>
-                <TableCell>Winner</TableCell>
-                <TableCell>Points</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {holeResults.map(result => (
-                <TableRow key={result.holeNumber}>
-                  <TableCell>{result.holeNumber}</TableCell>
-                  <TableCell>
-                    {result.winner
-                      ? players.find(p => p.id === result.winner)?.name || 'Unknown'
-                      : '-'}
-                  </TableCell>
-                  <TableCell>{result.points}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Typography variant="h6">Banker Game</Typography>
+        <Typography>Min Dots: {settings.min_dots}</Typography>
+        <Typography>Max Dots: {settings.max_dots}</Typography>
+        <Typography>Dot Value: {settings.dot_value}</Typography>
+        <Typography>Double Birdie Bets: {settings.double_birdie_bets ? 'Yes' : 'No'}</Typography>
+        <Typography>Use Gross Birdies: {settings.use_gross_birdies ? 'Yes' : 'No'}</Typography>
+        <Typography>Par 3 Triples: {settings.par3_triples ? 'Yes' : 'No'}</Typography>
       </Box>
     );
   };
 
-  const renderNassauResults = (game: Game) => {
-    if (!isNassauGame(game)) return null;
-
+  const renderNassauResults = (game: NassauGame) => {
+    const settings = game.settings;
     return (
       <Box key={game.type} sx={{ mb: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Nassau Results
-        </Typography>
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Match</TableCell>
-                <TableCell>Winner</TableCell>
-                <TableCell>Points</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              <TableRow>
-                <TableCell>Front Nine</TableCell>
-                <TableCell>
-                  {game.nassauData.frontNine.winner
-                    ? players.find(p => p.id === game.nassauData.frontNine.winner)?.name || 'Unknown'
-                    : '-'}
-                </TableCell>
-                <TableCell>{game.nassauData.frontNine.points}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Back Nine</TableCell>
-                <TableCell>
-                  {game.nassauData.backNine.winner
-                    ? players.find(p => p.id === game.nassauData.backNine.winner)?.name || 'Unknown'
-                    : '-'}
-                </TableCell>
-                <TableCell>{game.nassauData.backNine.points}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell>Overall Match</TableCell>
-                <TableCell>
-                  {game.nassauData.match.winner
-                    ? players.find(p => p.id === game.nassauData.match.winner)?.name || 'Unknown'
-                    : '-'}
-                </TableCell>
-                <TableCell>{game.nassauData.match.points}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <Typography variant="h6">Nassau Game</Typography>
+        <Typography>Front 9 Bet: ${settings.front_nine_bet}</Typography>
+        <Typography>Back 9 Bet: ${settings.back_nine_bet}</Typography>
+        <Typography>Match Bet: ${settings.match_bet}</Typography>
+        <Typography>Auto Press: {settings.auto_press ? 'Yes' : 'No'}</Typography>
+        <Typography>Press After: {settings.press_after} holes</Typography>
+      </Box>
+    );
+  };
+
+  const renderSkinsResults = (game: SkinsGame) => {
+    const settings = game.settings;
+    return (
+      <Box key={game.type} sx={{ mb: 4 }}>
+        <Typography variant="h6">Skins Game</Typography>
+        <Typography>Bet Amount: ${settings.bet_amount}</Typography>
+        <Typography>Carry Over: {settings.carry_over ? 'Yes' : 'No'}</Typography>
       </Box>
     );
   };
 
   return (
     <Box>
-      {games.map(game => {
-        switch (game.type) {
-          case 'banker':
-            return renderBankerResults(game);
-          case 'nassau':
-            return renderNassauResults(game);
-          default:
-            return null;
-        }
-      })}
+      {games.map((game) => (
+        <Box key={game.id}>
+          {isBankerGame(game) && renderBankerResults(game)}
+          {isNassauGame(game) && renderNassauResults(game)}
+          {isSkinsGame(game) && renderSkinsResults(game)}
+        </Box>
+      ))}
     </Box>
   );
 };

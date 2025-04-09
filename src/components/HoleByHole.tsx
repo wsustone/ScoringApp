@@ -10,9 +10,9 @@ interface Score {
   round_id: string;
   hole_id: string;
   player_id: string;
-  gross_score: number;
-  net_score: number;
-  has_stroke: boolean;
+  gross_score?: number;
+  net_score?: number;
+  has_stroke?: boolean;
   timestamp: string;
 }
 
@@ -20,9 +20,10 @@ interface HoleByHoleProps {
   players: PlayerRound[];
   holes: Hole[];
   scores: Score[];
-  onScoreUpdate: (playerId: string, holeId: string, score: number) => void;
+  onScoreUpdate: (playerId: string, holeId: string, score: number | null | undefined) => void;
   games: Game[];
   onBankerUpdate?: (holeNumber: number, data: Partial<BankerHoleData>) => void;
+  playerTees: Record<string, string>;
 }
 
 interface BankerHoleData {
@@ -33,7 +34,7 @@ interface BankerHoleData {
   doubles: string[];
 }
 
-export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBankerUpdate }: HoleByHoleProps) => {
+export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBankerUpdate, playerTees }: HoleByHoleProps) => {
   const [currentHoleIndex, setCurrentHoleIndex] = useState(0);
   const [selectedBanker, setSelectedBanker] = useState<string | null>(null);
   const [bankerDots, setBankerDots] = useState<number>(1);
@@ -69,7 +70,7 @@ export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBan
   const getPlayerScore = (playerId: string) => {
     if (!currentHole) return '';
     const score = scores.find(s => s.player_id === playerId && s.hole_id === currentHole.id);
-    return score ? score.gross_score.toString() : '';
+    return score ? (score.gross_score ?? '').toString() : '';
   };
 
   const handleBankerSelect = (playerId: string) => {
@@ -120,7 +121,7 @@ export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBan
                   {player.name}
                 </Typography>
                 <Typography variant="body2" color="textSecondary" gutterBottom>
-                  Tee: {player.tee_id}
+                  Tee: {playerTees[player.id]}
                 </Typography>
                 <TextField
                   label="Score"

@@ -6,6 +6,7 @@ import { UPDATE_SCORE } from '../graphql/mutations';
 import { HoleByHole } from '../components/HoleByHole';
 import { Scorecard } from '../components/Scorecard';
 import { RoundResponse } from '../types/round';
+import { Score, Hole } from '../types/game';
 
 interface GetRoundResponse {
   get_round: RoundResponse;
@@ -21,20 +22,32 @@ export const RoundPage = () => {
 
   const [updateScore] = useMutation(UPDATE_SCORE);
 
-  const handleScoreUpdate = async (playerId: string, holeId: string, score: number) => {
-    if (!id) return;
-
+  const handleScoreUpdate = (
+    player_id: string,
+    hole_id: string,
+    score: number | null | undefined
+  ) => {
     try {
-      await updateScore({
-        variables: {
-          input: {
-            round_id: id,
-            player_id: playerId,
-            hole_id: holeId,
-            score,
+      const round = data?.get_round;
+      if (!round) {
+        throw new Error('Round not found');
+      }
+
+      const existingScore = round.scores.find(
+        (s: Score) => s.player_id === player_id && s.hole_id === hole_id
+      );
+
+      if (existingScore) {
+        updateScore({
+          variables: {
+            id: existingScore.id,
+            score: score ?? null,
+            gross_score: score ?? null,
+            net_score: score ?? null,
+            has_stroke: score !== null,
           },
-        },
-      });
+        });
+      }
     } catch (error) {
       console.error('Error updating score:', error);
     }
@@ -59,7 +72,7 @@ export const RoundPage = () => {
           holes={round.players[0].holes}
           games={round.games}
           onScoreUpdate={handleScoreUpdate}
-          playerTees={round.player_tees}
+          playerTees={round.players.reduce((acc, player) => ({ ...acc, [player.id]: player.tee_id }), {})}
         />
       </Box>
 
@@ -67,9 +80,12 @@ export const RoundPage = () => {
         <Scorecard
           players={round.players}
           scores={round.scores}
-          playerTees={round.player_tees}
-          games={round.games}
-          on_score_change={handleScoreUpdate}
+          on_score_change={(player_id: string, hole_id: string, score: number | null | undefined) => {
+            const holeNumber = round.players[0].holes.find((h: Hole) => h.id === hole_id)?.number;
+            if (holeNumber) {
+              handleScoreUpdate(player_id, hole_id, score);
+            }
+          }}
         />
       </Box>
     </Box>

@@ -66,47 +66,6 @@ export const GET_COURSE_HOLES = gql`
   }
 `;
 
-export const START_ROUND = gql`
-  mutation StartRound($input: StartRoundInput!) {
-    start_round(input: $input) {
-      id
-      start_time
-      end_time
-      players {
-        id
-        name
-        tee_id
-      }
-      games {
-        id
-        type
-        enabled
-        settings {
-          banker {
-            min_dots
-            max_dots
-            dot_value
-            double_birdie_bets
-            use_gross_birdies
-            par3_triples
-          }
-          nassau {
-            front_nine_bet
-            back_nine_bet
-            match_bet
-            auto_press
-            press_after
-          }
-          skins {
-            carry_over
-            bet_amount
-          }
-        }
-      }
-    }
-  }
-`;
-
 export const GET_ACTIVE_ROUNDS = gql`
   query GetActiveRounds {
     get_active_rounds {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Card, CardContent, Typography, Grid } from '@mui/material';
+import { Card, CardContent, Typography, Grid } from '@mui/material';
 import { GolfCourse } from '../types/game';
 
 interface CourseSelectProps {
@@ -29,7 +29,7 @@ export const CourseSelect: React.FC<CourseSelectProps> = ({ courses, onCourseSel
                 {course.location}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {course.tees.length} tees available
+                {course.tee_settings.length} tees available
               </Typography>
             </CardContent>
           </Card>

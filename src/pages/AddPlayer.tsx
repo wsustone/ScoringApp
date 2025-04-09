@@ -57,7 +57,7 @@ export const AddPlayer = () => {
       id: Date.now().toString(),
       name,
       handicap,
-      teeId
+      tee_id: teeId
     };
 
     // Get existing players from localStorage or initialize empty array

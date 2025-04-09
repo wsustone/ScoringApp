@@ -3,12 +3,12 @@ import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Button, Gri
 import { useQuery, useMutation, useApolloClient } from '@apollo/client';
 import { v4 as uuidv4 } from 'uuid';
 import { GET_GOLF_COURSES, GET_ACTIVE_ROUNDS, GET_ROUND_SUMMARY, GET_ROUND_PLAYERS, GET_ROUND_SCORES, GET_ROUND_GAMES, GET_PLAYER_HOLES } from '../graphql/queries';
-import { START_ROUND, END_ROUND, DISCARD_ROUND, UPDATE_SCORE } from '../graphql/mutations';
+import { START_ROUND, END_ROUND, DISCARD_ROUND, UPDATE_SCORE, ADD_GAMES_TO_ROUND } from '../graphql/mutations';
 import { PlayerForm } from '../components/PlayerForm';
 import { GameComponent } from '../components/GameComponent';
 import { HoleByHole } from '../components/HoleByHole';
 import { Scorecard } from '../components/Scorecard';
-import { GolfCourse, Hole } from '../types/game';
+import { GolfCourse, Hole, Score } from '../types/game';
 import { PlayerRound, PlayerRoundBasic } from '../types/player';
 import { Game } from '../types/game';
 
@@ -80,6 +80,7 @@ export const Dashboard = () => {
     : null;
 
   const [startRound] = useMutation(START_ROUND);
+  const [addGamesToRound] = useMutation(ADD_GAMES_TO_ROUND);
   const [endRound] = useMutation(END_ROUND);
   const [discardRound] = useMutation(DISCARD_ROUND);
   const [updateScore] = useMutation(UPDATE_SCORE);
@@ -88,47 +89,60 @@ export const Dashboard = () => {
     if (!selectedCourse || players.length === 0 || selectedGames.length === 0) return;
 
     try {
-      const result = await startRound({
+      // First create the round with course and players
+      const roundResult = await startRound({
         variables: {
           input: {
+            id: roundData?.get_round?.id || uuidv4(),
             course_name: selectedCourse.name,
             players: players.map(p => ({
               id: p.id || uuidv4(),
               name: p.name,
               handicap: p.handicap,
               tee_id: p.tee_id
-            })),
+            }))
+          }
+        }
+      });
+
+      if (!roundResult.data?.start_round?.id) {
+        throw new Error('Failed to create round');
+      }
+
+      const roundId = roundResult.data.start_round.id;
+
+      // Then add the games to the round
+      await addGamesToRound({
+        variables: {
+          input: {
+            round_id: roundId,
             games: selectedGames.map(g => ({
               type: g.type,
-              course_id: selectedCourse.id,
-              enabled: g.enabled,
+              enabled: true,
               settings: g.settings
             }))
           }
         }
       });
 
-      if (result.data?.start_round) {
-        // Refetch the round data to get all details
-        await client.query({
-          query: GET_ROUND_SUMMARY,
-          variables: { id: result.data.start_round.id },
-          fetchPolicy: 'network-only'
-        });
-        setSelectedRound(result.data.start_round.id);
-        setActiveTab(2);
-      }
+      // Clear the form after successful round creation
+      setSelectedCourse(null);
+      setPlayers([]);
+      setSelectedGames([]);
+      setSelectedRound(roundId);
+      setActiveTab(2);
     } catch (error) {
       console.error('Error starting round:', error);
+      // Handle error appropriately
     }
   };
 
-  const handleEndRound = async () => {
-    if (!selectedRound) return;
+  const handleEndRound = async (roundId: string | undefined) => {
+    if (!roundId) return;
 
     try {
       await endRound({
-        variables: { id: selectedRound }
+        variables: { id: roundId }
       });
       setSelectedRound(null);
       setActiveTab(0);
@@ -137,7 +151,8 @@ export const Dashboard = () => {
     }
   };
 
-  const handleDiscardRound = async (roundId: string) => {
+  const handleDiscardRound = async (roundId: string | undefined) => {
+    if (!roundId) return;
     try {
       await discardRound({ variables: { id: roundId } });
       if (roundId === selectedRound) {
@@ -149,25 +164,24 @@ export const Dashboard = () => {
     }
   };
 
-  const handleScoreUpdate = async (player_id: string, hole_number: number, score: number | null) => {
-    if (!selectedRound || !roundData?.get_round) return;
+  const handleScoreUpdate = (playerId: string, holeNumber: number, score: number | null | undefined) => {
+    if (!roundData) return;
 
-    const hole = roundData.get_round.players[0].holes.find((h: Hole) => h.number === hole_number);
-    if (!hole) return;
+    const holeId = `hole${holeNumber}`;
+    const existingScore = roundData.get_round.scores.find(
+      (s: Score) => s.player_id === playerId && s.hole_id === holeId
+    );
 
-    try {
-      await updateScore({
+    if (existingScore) {
+      updateScore({
         variables: {
-          input: {
-            round_id: selectedRound,
-            player_id,
-            hole_id: hole.id,
-            score: score || 0
-          }
-        }
+          id: existingScore.id,
+          score: score ?? null,
+          gross_score: score ?? null,
+          net_score: score ?? null,
+          has_stroke: score !== null,
+        },
       });
-    } catch (error) {
-      console.error('Error updating score:', error);
     }
   };
 
@@ -308,6 +322,10 @@ export const Dashboard = () => {
                 }
               }}
               games={roundData.get_round.games}
+              playerTees={roundData.get_round.players.reduce((tees: Record<string, string>, player: { id: string; tee_setting?: string | null }) => ({
+                ...tees,
+                [player.id]: player.tee_setting || 'default'
+              }), {} as Record<string, string>)}
             />
           </Box>
 
@@ -315,18 +333,32 @@ export const Dashboard = () => {
             <Scorecard
               players={roundData.get_round.players}
               scores={roundData.get_round.scores}
-              on_score_change={handleScoreUpdate}
-              on_end_round={() => handleEndRound(selectedRound)}
-              on_discard_round={() => handleDiscardRound(selectedRound)}
+              on_score_change={(player_id: string, hole_id: string, score: number | null | undefined) => {
+                const holeNumber = roundData.get_round.players[0].holes.find((h: Hole) => h.id === hole_id)?.number;
+                if (holeNumber) {
+                  handleScoreUpdate(player_id, holeNumber, score);
+                }
+              }}
+              on_end_round={handleEndRound}
+              on_discard_round={handleDiscardRound}
               loading={isRoundDataLoading}
+              roundId={selectedRound || undefined}
             />
           </Box>
 
           <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button variant="contained" onClick={() => handleEndRound(selectedRound)}>
+            <Button variant="contained" onClick={() => {
+              if (selectedRound) {
+                handleEndRound(selectedRound);
+              }
+            }}>
               End Round
             </Button>
-            <Button variant="outlined" color="error" onClick={() => handleDiscardRound(selectedRound)}>
+            <Button variant="outlined" color="error" onClick={() => {
+              if (selectedRound) {
+                handleDiscardRound(selectedRound);
+              }
+            }}>
               Discard Round
             </Button>
           </Box>
