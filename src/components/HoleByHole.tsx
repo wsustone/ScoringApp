@@ -24,6 +24,7 @@ interface HoleByHoleProps {
   games: Game[];
   onBankerUpdate?: (holeNumber: number, data: Partial<BankerHoleData>) => void;
   playerTees: Record<string, string>;
+  strokes_received: number;
 }
 
 interface BankerHoleData {
@@ -34,7 +35,7 @@ interface BankerHoleData {
   doubles: string[];
 }
 
-export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBankerUpdate, playerTees }: HoleByHoleProps) => {
+export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBankerUpdate, playerTees, strokes_received }: HoleByHoleProps) => {
   const [currentHoleIndex, setCurrentHoleIndex] = useState(0);
   const [selectedBanker, setSelectedBanker] = useState<string | null>(null);
   const [bankerDots, setBankerDots] = useState<number>(1);
@@ -107,6 +108,9 @@ export const HoleByHole = ({ players, holes, scores, onScoreUpdate, games, onBan
         <Typography variant="h6" sx={{ mx: 2 }}>
           Hole {currentHole.number} - Par {currentHole.par}
         </Typography>
+        {strokes_received > 0 && (
+          <span className="stroke-indicator">({strokes_received})</span>
+        )}
         <IconButton onClick={handleNextHole} disabled={currentHoleIndex === holes.length - 1}>
           <NavigateNextIcon />
         </IconButton>

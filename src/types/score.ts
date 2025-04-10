@@ -1,10 +1,11 @@
 export interface Score {
   id: string;
   round_id: string;
-  player_id: string;
   hole_id: string;
-  score: number | null;
+  player_id: string;
+  score: number;
+  gross_score?: number;
+  net_score?: number;
+  strokes_received: number;
   timestamp: string;
-  net_score?: number | null;
-  has_stroke?: boolean;
 }
