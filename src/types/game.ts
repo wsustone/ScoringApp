@@ -44,6 +44,22 @@ export interface Game {
   settings: GameSettings;
 }
 
+// Specialized Game interfaces for each game type
+export interface BankerGame extends Omit<Game, 'settings' | 'type'> {
+  type: 'banker';
+  settings: BankerSettings;
+}
+
+export interface NassauGame extends Omit<Game, 'settings' | 'type'> {
+  type: 'nassau';
+  settings: NassauSettings;
+}
+
+export interface SkinsGame extends Omit<Game, 'settings' | 'type'> {
+  type: 'skins';
+  settings: SkinsSettings;
+}
+
 export interface Hole {
   id: string;
   number: number;
@@ -65,21 +81,6 @@ export interface TeeSetting {
   course_rating: number;
   slope_rating: number;
   holes: Hole[];
-}
-
-export interface Score {
-  player_id: string;
-  hole_id: string;
-  score: number;
-  points: number;
-}
-
-export interface PlayerRound {
-  id: string;
-  name: string;
-  handicap: number;
-  tee_id: string;
-  scores: Score[];
 }
 
 export interface PlayerRoundBasic {

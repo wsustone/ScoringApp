@@ -9,17 +9,10 @@ interface GameResultsProps {
   holes: number[];
 }
 
-const isBankerGame = (game: Game): game is BankerGame => {
-  return game.type === 'banker';
-};
-
-const isNassauGame = (game: Game): game is NassauGame => {
-  return game.type === 'nassau';
-};
-
-const isSkinsGame = (game: Game): game is SkinsGame => {
-  return game.type === 'skins';
-};
+// Use type guards that only check the 'type' property instead of type predicates that assert full type compatibility
+const isBankerGame = (game: Game): boolean => game.type === 'banker';
+const isNassauGame = (game: Game): boolean => game.type === 'nassau';
+const isSkinsGame = (game: Game): boolean => game.type === 'skins';
 
 export const GameResults: React.FC<GameResultsProps> = ({ games }) => {
   const renderBankerResults = (game: BankerGame) => {
@@ -66,9 +59,9 @@ export const GameResults: React.FC<GameResultsProps> = ({ games }) => {
     <Box>
       {games.map((game) => (
         <Box key={game.id}>
-          {isBankerGame(game) && renderBankerResults(game)}
-          {isNassauGame(game) && renderNassauResults(game)}
-          {isSkinsGame(game) && renderSkinsResults(game)}
+          {isBankerGame(game) && renderBankerResults(game as BankerGame)}
+          {isNassauGame(game) && renderNassauResults(game as NassauGame)}
+          {isSkinsGame(game) && renderSkinsResults(game as SkinsGame)}
         </Box>
       ))}
     </Box>

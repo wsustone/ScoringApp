@@ -1,5 +1,6 @@
-import { Game, PlayerRound } from './game';
-import { Score as ApiScore } from '@scoringengine/api-types';
+import { Game, Hole } from './game';
+import { PlayerRound } from './player';
+import { Score } from './score';
 
 export interface Round {
   id: string;
@@ -21,12 +22,5 @@ export interface RoundResponse {
   players: PlayerRound[];
   scores: Score[];
   games: Game[];
-}
-
-interface Score {
-    hole_id: string;
-    player_id: string;
-    gross_score: number;
-    net_score: number;
-    strokes_received: number;
+  holes: Hole[]; // <-- Add holes property for use in Scorecard
 }

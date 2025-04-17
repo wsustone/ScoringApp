@@ -20,11 +20,13 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon } from '@mui/icons-material';
 import { PlayerRound } from '../types/player';
-import { Hole, Score } from '../types/game';
+import { Hole } from '../types/game';
+import { Score } from '../types/score';
 
 interface ScorecardProps {
   players: PlayerRound[];
   scores: Score[];
+  holes: Hole[];
   on_score_change: (player_id: string, hole_id: string, score: number | undefined) => void;
   on_end_round?: (roundId: string | undefined) => void;
   on_discard_round?: (roundId: string | undefined) => void;
@@ -138,6 +140,7 @@ const ScoreLegend = () => {
 export const Scorecard = ({ 
   players, 
   scores, 
+  holes,
   on_score_change, 
   on_end_round, 
   on_discard_round,
@@ -151,14 +154,13 @@ export const Scorecard = ({
   // Group holes by player since each player might have different tees
   const player_holes = useMemo(() => {
     return players.reduce((acc, player) => {
-      const holes = player.holes || [];
       acc[player.id] = {
         front_nine: holes.filter((h: Hole) => h.number <= 9),
         back_nine: holes.filter((h: Hole) => h.number > 9)
       };
       return acc;
     }, {} as { [key: string]: { front_nine: Hole[], back_nine: Hole[] } });
-  }, [players]);
+  }, [players, holes]);
 
   if (loading) {
     return (
@@ -230,7 +232,7 @@ export const Scorecard = ({
           <TableHead>
             <TableRow>
               <TableCell>Player</TableCell>
-              {players[0]?.holes?.filter((h: Hole) => h.number <= 9).map((hole: Hole) => (
+              {holes.filter((h: Hole) => h.number <= 9).map((hole: Hole) => (
                 <TableCell key={hole.id} align="center">
                   {hole.number}
                   <br />
@@ -246,7 +248,7 @@ export const Scorecard = ({
           </TableHead>
           <TableBody>
             {players.map(player => {
-              const handicap_strokes = calculate_handicap_strokes(player.handicap, player.holes || []);
+              const handicap_strokes = calculate_handicap_strokes(player.handicap, holes);
               const { front_nine: front_holes } = player_holes[player.id];
               const { net_total: front_net_total } = calculate_totals(player.id, front_holes, scores, handicap_strokes);
               
@@ -323,7 +325,7 @@ export const Scorecard = ({
             <TableHead>
               <TableRow>
                 <TableCell>Player</TableCell>
-                {players[0]?.holes?.filter((h: Hole) => h.number > 9).map((hole: Hole) => (
+                {holes.filter((h: Hole) => h.number > 9).map((hole: Hole) => (
                   <TableCell key={hole.id} align="center">
                     {hole.number}
                     <br />
@@ -340,10 +342,10 @@ export const Scorecard = ({
             </TableHead>
             <TableBody>
               {players.map(player => {
-                const handicap_strokes = calculate_handicap_strokes(player.handicap, player.holes || []);
+                const handicap_strokes = calculate_handicap_strokes(player.handicap, holes);
                 const { back_nine: back_holes } = player_holes[player.id];
                 const { net_total: back_net_total } = calculate_totals(player.id, back_holes, scores, handicap_strokes);
-                const { net_total: total_net } = calculate_totals(player.id, player.holes || [], scores, handicap_strokes);
+                const { net_total: total_net } = calculate_totals(player.id, holes, scores, handicap_strokes);
                 
                 return (
                   <TableRow key={player.id}>

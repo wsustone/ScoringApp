@@ -14,7 +14,7 @@ export interface Player extends PlayerBasic {
 }
 
 // Player in a round
-export interface PlayerRound extends Player {
+export interface PlayerRound extends PlayerBasic {
   round_id: string;
   player_id: string;
 }

@@ -1,16 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Box, Typography, FormControl, InputLabel, Select, MenuItem, Button, Grid, Card, CardContent, List, ListItem, ListItemText, Tabs, Tab, CircularProgress } from '@mui/material';
-import { useQuery, useMutation, useApolloClient } from '@apollo/client';
-import { v4 as uuidv4 } from 'uuid';
-import { GET_GOLF_COURSES, GET_ACTIVE_ROUNDS, GET_ROUND_SUMMARY, GET_ROUND_PLAYERS, GET_ROUND_SCORES, GET_ROUND_GAMES, GET_PLAYER_HOLES } from '../graphql/queries';
-import { START_ROUND, END_ROUND, DISCARD_ROUND, UPDATE_SCORE, ADD_GAMES_TO_ROUND } from '../graphql/mutations';
-import { PlayerForm } from '../components/PlayerForm';
-import { GameComponent } from '../components/GameComponent';
+import { useQuery, useMutation } from '@apollo/client';
+import { START_ROUND, ADD_GAMES_TO_ROUND, END_ROUND, DISCARD_ROUND } from '../graphql/mutations';
+import { GET_PLAYER_HOLES, GET_GOLF_COURSES, GET_ACTIVE_ROUNDS, GET_ROUND_GAMES, GET_ROUND_PLAYERS, GET_ROUND_SCORES, GET_ROUND_SUMMARY } from '../graphql/queries';
+import { PlayerRound } from '../types/player';
 import { HoleByHole } from '../components/HoleByHole';
 import { Scorecard } from '../components/Scorecard';
-import { GolfCourse, Hole, Score } from '../types/game';
-import { PlayerRound, PlayerRoundBasic } from '../types/player';
-import { Game, GameSettings } from '../types/game';
+import { GolfCourse } from '../types/game';
+import { PlayerForm } from '../components/PlayerForm';
+import { GameComponent } from '../components/GameComponent';
+import { Game } from '../types/game';
 
 interface GetActiveRoundsResponse {
   get_active_rounds: {
@@ -19,7 +18,7 @@ interface GetActiveRoundsResponse {
     status: string;
     start_time: string;
     end_time: string | null;
-    players: PlayerRoundBasic[];
+    players: PlayerRound[];
   }[];
 }
 
@@ -30,9 +29,8 @@ export const Dashboard = () => {
   const [selectedRound, setSelectedRound] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(0);
 
-  const client = useApolloClient();
+  const client = useQuery(GET_GOLF_COURSES);
 
-  const { data: coursesData, loading: coursesLoading } = useQuery<{ golf_courses: GolfCourse[] }>(GET_GOLF_COURSES);
   const { data: activeRoundsData, loading: activeRoundsLoading } = useQuery<GetActiveRoundsResponse>(GET_ACTIVE_ROUNDS);
   
   const { data: roundInfo, loading: roundInfoLoading } = useQuery(GET_ROUND_SUMMARY, {
@@ -59,7 +57,7 @@ export const Dashboard = () => {
   useEffect(() => {
     if (roundPlayers?.get_round?.players) {
       roundPlayers.get_round.players.forEach((player: PlayerRound) => {
-        client.query({
+        client.data({
           query: GET_PLAYER_HOLES,
           variables: { tee_id: player.tee_id }
         });
@@ -83,69 +81,50 @@ export const Dashboard = () => {
   const [addGamesToRound] = useMutation(ADD_GAMES_TO_ROUND);
   const [endRound] = useMutation(END_ROUND);
   const [discardRound] = useMutation(DISCARD_ROUND);
-  const [updateScore] = useMutation(UPDATE_SCORE);
 
   const handleStartRound = async () => {
     if (!selectedCourse || players.length === 0 || selectedGames.length === 0) return;
 
     try {
+      if (!selectedCourse?.id) {
+        throw new Error('No course selected');
+      }
+
       // First create the round with course and players
-      const roundResult = await startRound({
+      const { data } = await startRound({
         variables: {
           input: {
-            id: roundData?.get_round?.id || uuidv4(),
             course_id: selectedCourse.id,
             players: players.map(p => ({
-              id: p.id || uuidv4(),
+              id: p.id,
               name: p.name,
               handicap: p.handicap,
               tee_id: p.tee_id
             }))
           }
-        }
+        },
       });
 
-      if (!roundResult.data?.start_round?.id) {
+      if (!data?.start_round?.id) {
         throw new Error('Failed to create round');
       }
 
-      const roundId = roundResult.data.start_round.id;
+      const roundId = data.start_round.id;
 
-      // Then add the games to the round
+      // Add games after successful round creation
       await addGamesToRound({
         variables: {
           input: {
             round_id: roundId,
-            games: selectedGames.map(g => {
-              const settings: GameSettings = {
-                banker: null,
-                nassau: null,
-                skins: null,
-                matchplay: null
-              };
-
-              switch (g.type) {
-                case 'banker':
-                  settings.banker = g.settings.banker;
-                  break;
-                case 'nassau':
-                  settings.nassau = g.settings.nassau;
-                  break;
-                case 'skins':
-                  settings.skins = g.settings.skins;
-                  break;
-                case 'matchplay':
-                  settings.matchplay = g.settings.matchplay;
-                  break;
-              }
-
-              return {
-                type: g.type,
-                enabled: true,
-                course_id: selectedCourse.id,
-                settings
-              };
-            })
+            games: selectedGames.map(g => ({
+              type: g.type,
+              enabled: true,
+              course_id: selectedCourse.id,
+              ...(g.type === 'banker' && { banker: g.settings }),
+              ...(g.type === 'nassau' && { nassau: g.settings }),
+              ...(g.type === 'skins' && { skins: g.settings }),
+              ...(g.type === 'matchplay' && { matchplay: g.settings })
+            }))
           }
         }
       });
@@ -189,28 +168,8 @@ export const Dashboard = () => {
     }
   };
 
-  const handleScoreUpdate = (playerId: string, holeNumber: number, score: number | null | undefined) => {
-    if (!roundData) return;
 
-    const holeId = `hole${holeNumber}`;
-    const existingScore = roundData.get_round.scores.find(
-      (s: Score) => s.player_id === playerId && s.hole_id === holeId
-    );
-
-    if (existingScore) {
-      updateScore({
-        variables: {
-          id: existingScore.id,
-          score: score ?? null,
-          gross_score: score ?? null,
-          net_score: score ?? null,
-          has_stroke: score !== null,
-        },
-      });
-    }
-  };
-
-  if (coursesLoading || activeRoundsLoading || (selectedRound && isRoundDataLoading)) {
+  if (activeRoundsLoading || (selectedRound && isRoundDataLoading)) {
     return <CircularProgress />;
   }
 
@@ -236,11 +195,11 @@ export const Dashboard = () => {
             <Select
               value={selectedCourse?.id || ''}
               onChange={(e) => {
-                const course = coursesData?.golf_courses.find(c => c.id === e.target.value);
+                const course = client.data?.golf_courses.find((gc: GolfCourse) => gc.id === e.target.value);
                 setSelectedCourse(course || null);
               }}
             >
-              {coursesData?.golf_courses.map((course) => (
+              {client.data?.golf_courses.map((course: GolfCourse) => (
                 <MenuItem key={course.id} value={course.id}>
                   {course.name}
                 </MenuItem>
@@ -334,23 +293,19 @@ export const Dashboard = () => {
           <Typography variant="h5" gutterBottom>
             {roundData.get_round.course_id}
           </Typography>
-          
+
           <Box sx={{ mb: 4 }}>
             <HoleByHole
               players={roundData.get_round.players}
               scores={roundData.get_round.scores}
               holes={roundData.get_round.players[0].holes}
-              onScoreUpdate={(playerId, holeId, score) => {
-                const holeNumber = roundData.get_round.players[0].holes.find((h: Hole) => h.id === holeId)?.number;
-                if (holeNumber) {
-                  handleScoreUpdate(playerId, holeNumber, score);
-                }
-              }}
+              onScoreUpdate={() => {}}
               games={roundData.get_round.games}
-              playerTees={roundData.get_round.players.reduce((tees: Record<string, string>, player: { id: string; tee_setting?: string | null }) => ({
+              playerTees={roundData.get_round.players.reduce((tees: Record<string, string>, player: PlayerRound) => ({
                 ...tees,
-                [player.id]: player.tee_setting || 'default'
+                [player.id]: player.tee_id
               }), {} as Record<string, string>)}
+              strokes_received={0} // Now handled per score
             />
           </Box>
 
@@ -358,12 +313,8 @@ export const Dashboard = () => {
             <Scorecard
               players={roundData.get_round.players}
               scores={roundData.get_round.scores}
-              on_score_change={(player_id: string, hole_id: string, score: number | null | undefined) => {
-                const holeNumber = roundData.get_round.players[0].holes.find((h: Hole) => h.id === hole_id)?.number;
-                if (holeNumber) {
-                  handleScoreUpdate(player_id, holeNumber, score);
-                }
-              }}
+              holes={roundData.get_round.players[0].holes || []}
+              on_score_change={() => {}}
               on_end_round={handleEndRound}
               on_discard_round={handleDiscardRound}
               loading={isRoundDataLoading}

@@ -2,7 +2,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MockedProvider } from '@apollo/client/testing';
 import { BankerGame } from './BankerGame';
-import { UPDATE_SCORE } from '../graphql/mutations';
+import { UPDATE_SCORE, UPDATE_BANKER } from '../graphql/mutations';
 import '@testing-library/jest-dom';
 import { PlayerRound } from '../types/player';
 import { Hole } from '../types/game';
@@ -21,8 +21,7 @@ const mockPlayers: PlayerRound[] = [
     player_id: 'p1', 
     name: 'Player 1', 
     handicap: 10, 
-    tee_id: 'tee1',
-    holes: mockHoles 
+    tee_id: 'tee1'
   },
   { 
     id: 'player2', 
@@ -30,8 +29,7 @@ const mockPlayers: PlayerRound[] = [
     player_id: 'p2', 
     name: 'Player 2', 
     handicap: 15, 
-    tee_id: 'tee1',
-    holes: mockHoles
+    tee_id: 'tee1'
   }
 ];
 
@@ -50,7 +48,7 @@ const mockScores = {
 
 describe('BankerGame', () => {
   const defaultProps = {
-    players: mockPlayers,
+    players: mockPlayers.map(p => ({ ...p, holes: mockHoles })) as any,
     holes: mockHoles,
     scores: mockScores,
     currentHole: 1,
@@ -73,15 +71,40 @@ describe('BankerGame', () => {
       request: {
         query: UPDATE_SCORE,
         variables: {
-          roundId: 'round1',
-          holeNumber: 1,
-          playerId: 'player1',
-          score: 4
+          id: 'score1',
+          score: 4,
+          gross_score: 4,
+          net_score: 3,
+          strokes_received: 1
         }
       },
       result: {
         data: {
-          updateScore: true
+          updateScore: {
+            id: 'score1',
+            hole_id: 'hole1',
+            player_id: 'player1',
+            gross_score: 4,
+            net_score: 3,
+            strokes_received: 1
+          }
+        }
+      }
+    },
+    {
+      request: {
+        query: UPDATE_BANKER,
+        variables: {
+          holeNumber: 1,
+          winner: 'player1',
+          points: 1,
+          dots: 1,
+          doubles: []
+        }
+      },
+      result: {
+        data: {
+          updateBanker: true
         }
       }
     }

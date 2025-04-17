@@ -345,3 +345,83 @@ describe('ADD_GAMES_TO_ROUND mutation', () => {
     });
   });
 });
+
+describe('addGamesToRound', () => {
+  it('should successfully add banker game to round', async () => {
+    const mockResponse = {
+      addGamesToRound: [{
+        id: 'game-1',
+        type: 'banker',
+        enabled: true,
+        course_id: 'course-1'
+      }]
+    };
+
+    const mocks = [{
+      request: {
+        query: ADD_GAMES_TO_ROUND,
+        variables: {
+          input: {
+            round_id: 'round-1',
+            games: [{
+              type: 'banker',
+              enabled: true,
+              course_id: 'course-1',
+              banker: {
+                min_dots: 1,
+                max_dots: 3,
+                dot_value: 1,
+                double_birdie_bets: true,
+                use_gross_birdies: false,
+                par3_triples: false
+              }
+            }]
+          }
+        }
+      },
+      result: { data: mockResponse }
+    }];
+
+    const TestComponent = () => {
+      const [addGames, { data, error }] = useMutation(ADD_GAMES_TO_ROUND);
+      
+      useEffect(() => {
+        addGames({
+          variables: {
+            input: {
+              round_id: 'round-1',
+              games: [{
+                type: 'banker',
+                enabled: true,
+                course_id: 'course-1',
+                banker: {
+                  min_dots: 1,
+                  max_dots: 3,
+                  dot_value: 1,
+                  double_birdie_bets: true,
+                  use_gross_birdies: false,
+                  par3_triples: false
+                }
+              }]
+            }
+          }
+        });
+      }, [addGames]);
+
+      if (error) return <div>Error: {error.message}</div>;
+      if (data) return <div>Success: {JSON.stringify(data)}</div>;
+      return <div>Loading...</div>;
+    };
+
+    render(
+      <MockedProvider mocks={mocks} addTypename={false}>
+        <TestComponent />
+      </MockedProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Success/)).toBeInTheDocument();
+      expect(screen.getByText(/game-1/)).toBeInTheDocument();
+    });
+  });
+});

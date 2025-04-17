@@ -85,8 +85,9 @@ export const UPDATE_SCORE = gql`
       player_id
       gross_score
       net_score
-      has_stroke
+      strokes_received
       timestamp
+      score
     }
   }
 `;
@@ -112,26 +113,24 @@ export const UPDATE_GAME_SETTINGS = gql`
       course_id
       type
       enabled
-      settings {
-        banker {
-          min_dots
-          max_dots
-          dot_value
-          double_birdie_bets
-          use_gross_birdies
-          par3_triples
-        }
-        nassau {
-          front_nine_bet
-          back_nine_bet
-          match_bet
-          auto_press
-          press_after
-        }
-        skins {
-          bet_amount
-          carry_over
-        }
+      ... on BankerGame {
+        min_dots
+        max_dots
+        dot_value
+        double_birdie_bets
+        use_gross_birdies
+        par3_triples
+      }
+      ... on NassauGame {
+        front_nine_bet
+        back_nine_bet
+        match_bet
+        auto_press
+        press_after
+      }
+      ... on SkinsGame {
+        skin_value
+        carry_over
       }
     }
   }
@@ -157,5 +156,23 @@ export const END_ROUND = gql`
 export const DISCARD_ROUND = gql`
   mutation DiscardRound($id: ID!) {
     discard_round(id: $id)
+  }
+`;
+
+export const UPDATE_BANKER = gql`
+  mutation UpdateBanker(
+    $holeNumber: Int!
+    $winner: ID
+    $points: Int
+    $dots: Int
+    $doubles: [ID!]
+  ) {
+    updateBanker(
+      holeNumber: $holeNumber
+      winner: $winner
+      points: $points
+      dots: $dots
+      doubles: $doubles
+    )
   }
 `;

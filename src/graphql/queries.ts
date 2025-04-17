@@ -73,7 +73,6 @@ export const GET_ACTIVE_ROUNDS = gql`
       course_id
       status
       start_time
-      end_time
       players {
         id
         round_id
@@ -87,7 +86,7 @@ export const GET_ACTIVE_ROUNDS = gql`
 
 export const GET_ROUND_SUMMARY = gql`
   query GetRoundSummary($id: ID!) {
-    get_round(id: $id) {
+    get_round_summary(id: $id) {
       id
       course_id
       status
@@ -99,81 +98,75 @@ export const GET_ROUND_SUMMARY = gql`
 
 export const GET_ROUND_PLAYERS = gql`
   query GetRoundPlayers($id: ID!) {
-    get_round(id: $id) {
-      players {
-        id
-        name
-        tee_id
-        holes {
-          id
-          number
-          par
-          stroke_index
-          distance
-        }
-      }
+    get_round_players(id: $id) {
+      id
+      round_id
+      player_id
+      name
+      handicap
+      tee_id
     }
   }
 `;
 
 export const GET_ROUND_SCORES = gql`
   query GetRoundScores($id: ID!) {
-    get_round(id: $id) {
-      scores {
-        id
-        hole_id
-        player_id
-        gross_score
-        net_score
-        has_stroke
-        timestamp
-      }
-    }
-  }
-`;
-
-export const GET_ROUND = gql`
-  query GetRound($id: ID!) {
-    get_round(id: $id) {
+    get_round_scores(id: $id) {
       id
-      course_id
-      status
-      start_time
-      end_time
-      players {
-        id
-        name
-        tee_id
-        holes {
-          id
-          number
-          par
-          stroke_index
-          distance
-        }
-      }
-      scores {
-        id
-        hole_id
-        player_id
-        gross_score
-        net_score
-        has_stroke
-        timestamp
-      }
+      round_id
+      hole_id
+      player_id
+      gross_score
+      net_score
+      strokes_received
+      timestamp
     }
   }
 `;
 
 export const GET_ROUND_GAMES = gql`
   query GetRoundGames($id: ID!) {
-    get_round(id: $id) {
+    get_round_games(id: $id) {
+      id
+      type
+      enabled
+      min_dots
+      max_dots
+      dot_value
+      double_birdie_bets
+      use_gross_birdies
+      par3_triples
+      match_bet
+      auto_press
+      skin_value
+      carry_over
+      front_nine_bet
+      back_nine_bet
+    }
+  }
+`;
+
+export const GET_SCORECARD = gql`
+  query GetScorecard($round_id: ID!) {
+    scorecard(round_id: $round_id) {
+      round_id
+      players {
+        id
+        name
+        tee_id
+        scores {
+          hole_id
+          gross_score
+          net_score
+          strokes_received
+          score
+        }
+      }
       games {
         id
         type
         enabled
         settings {
-          __typename
           ... on BankerSettings {
             min_dots
             max_dots
@@ -194,38 +187,6 @@ export const GET_ROUND_GAMES = gql`
             carry_over
           }
         }
-      }
-    }
-  }
-`;
-
-export const GET_SCORECARD = gql`
-  query GetScorecard($round_id: ID!) {
-    scorecard(round_id: $round_id) {
-      id
-      course_id
-      players {
-        id
-        name
-        handicap
-      }
-      holes {
-        id
-        number
-        par
-        stroke_index
-        distance
-      }
-      scores {
-        id
-        round_id
-        hole_id
-        player_id
-        gross_score
-        net_score
-        has_stroke
-        timestamp
-        score
       }
     }
   }
@@ -278,7 +239,7 @@ export const GET_ROUND_SCORES_INFO = gql`
         player_id
         gross_score
         net_score
-        has_stroke
+        strokes_received
         timestamp
       }
     }

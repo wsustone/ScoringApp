@@ -2,18 +2,13 @@ import { useState } from 'react';
 import { Box, Button, Grid, TextField, MenuItem, IconButton } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import { TeeSetting } from '../types/game';
+import { PlayerRound } from '../types/player';
 
 export interface Player {
   id: string;
   name: string;
   handicap: number;
   tee_id: string;
-}
-
-interface PlayerRound extends Player {
-  round_id: string;
-  player_id: string;
-  holes: any[];
 }
 
 interface PlayerFormProps {
@@ -26,8 +21,7 @@ export const PlayerForm = ({ onPlayersChange, players, teeSettings }: PlayerForm
   const [newPlayer, setNewPlayer] = useState<Partial<PlayerRound>>({
     name: '',
     handicap: 0,
-    tee_id: '',
-    holes: []
+    tee_id: ''
   });
 
   const handleAddPlayer = () => {
@@ -40,11 +34,10 @@ export const PlayerForm = ({ onPlayersChange, players, teeSettings }: PlayerForm
       tee_id: newPlayer.tee_id,
       round_id: players.length > 0 ? players[0].round_id : '',
       player_id: Date.now().toString(),
-      holes: []
     };
 
     onPlayersChange([...players, player]);
-    setNewPlayer({ name: '', handicap: 0, tee_id: '', holes: [] });
+    setNewPlayer({ name: '', handicap: 0, tee_id: '' });
   };
 
   const handleRemovePlayer = (index: number) => {

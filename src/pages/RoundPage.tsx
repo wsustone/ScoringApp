@@ -1,12 +1,12 @@
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
 import { Box, Typography, CircularProgress } from '@mui/material';
-import { GET_ROUND } from '../graphql/queries';
+import { GET_ROUND_INFO } from '../graphql/queries';
 import { UPDATE_SCORE } from '../graphql/mutations';
 import { HoleByHole } from '../components/HoleByHole';
 import { Scorecard } from '../components/Scorecard';
 import { RoundResponse } from '../types/round';
-import { Score, Hole } from '../types/game';
+import { Score } from '../types/score';
 
 interface GetRoundResponse {
   get_round: RoundResponse;
@@ -15,7 +15,7 @@ interface GetRoundResponse {
 export const RoundPage = () => {
   const { id } = useParams<{ id: string }>();
 
-  const { loading, error, data } = useQuery<GetRoundResponse>(GET_ROUND, {
+  const { loading, error, data } = useQuery<GetRoundResponse>(GET_ROUND_INFO, {
     variables: { id },
     skip: !id,
   });
@@ -44,11 +44,11 @@ export const RoundPage = () => {
             score: score ?? null,
             gross_score: score ?? null,
             net_score: score ?? null,
-            has_stroke: score !== null,
+            strokes_received: score !== null ? 1 : 0
           },
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating score:', error);
     }
   };
@@ -68,11 +68,12 @@ export const RoundPage = () => {
       <Box sx={{ mb: 4 }}>
         <HoleByHole
           players={round.players}
+          holes={[]} // TODO: Replace with actual holes array from round or course
           scores={round.scores}
-          holes={round.players[0].holes}
           games={round.games}
           onScoreUpdate={handleScoreUpdate}
           playerTees={round.players.reduce((acc, player) => ({ ...acc, [player.id]: player.tee_id }), {})}
+          strokes_received={0} // TODO: Replace with actual strokes_received if available
         />
       </Box>
 
@@ -80,11 +81,9 @@ export const RoundPage = () => {
         <Scorecard
           players={round.players}
           scores={round.scores}
+          holes={round.holes || []}
           on_score_change={(player_id: string, hole_id: string, score: number | null | undefined) => {
-            const holeNumber = round.players[0].holes.find((h: Hole) => h.id === hole_id)?.number;
-            if (holeNumber) {
-              handleScoreUpdate(player_id, hole_id, score);
-            }
+            handleScoreUpdate(player_id, hole_id, score);
           }}
         />
       </Box>
